@@ -2,6 +2,13 @@ class Document {
     text = ''
     history = []
 
+    styling = {
+        bold: {
+            active: false,
+            ranges: []
+        }
+    }
+
     insert(start, value) {
         const historyItem = { type: 'insert', value, start }
         this.history.push(historyItem)
@@ -81,22 +88,48 @@ function index(el) {
 }
 
 class BakaEditor extends HTMLElement {
-    template = '<div id="editor" contenteditable><div></div></div>'
+    template = `<div id="wrapper">
+        <div id="buttons">
+            <a href="#" id="bold" class="">B</a>
+        </div>
+        <div id="placeholder">Type something!</div>
+        <div id="editor" contenteditable></div >
+    </div>`
     elms = {}
     cursorPos = 0
 
     connectedCallback() {
         this.innerHTML = this.template
         this.elms.editor = this.querySelector('#editor')
+        this.elms.placeholder = this.querySelector('#placeholder')
         this.document = new Document()
         this.document.addEventListener('update', this.onTextUpdate.bind(this))
+        this.document.addEventListener('update', this.logger.bind(this))
         this.initEditor()
     }
 
+    logger(historyEvent) {
+        console.log(
+            '\n%cFired event %s\n%c%s\n%c%s\n%s%o\n',
+            ['font-weight: bold', 'margin-bottom: 6px'].join(';'),
+            historyEvent.type.toUpperCase(),
+            ['color: rgba(0,0,0,1)', 'padding-bottom: 6px'].join(';'),
+            this.document.text,
+            ['color: rgba(0,0,0,.9)', 'line-height: 1.4em'].join(';'),
+            `Document length: ${this.document.text.length}; Cursor position: ${this.cursorPos}`,
+            'Event details:',
+            historyEvent
+        )
+    }
+
     onTextUpdate(event) {
+        if (this.document.text.length) {
+            this.elms.placeholder.classList.add('invisible')
+        } else {
+            this.elms.placeholder.classList.remove('invisible')
+        }
         this.elms.editor.innerHTML = this.document.toHtml()
         this.setCursorPos(this.cursorPos)
-        console.log(this.document.text, this.cursorPos)
     }
 
     initEditor() {
@@ -118,7 +151,6 @@ class BakaEditor extends HTMLElement {
             if (e.key.length !== 1) return
 
             let range = this.getSelection()
-            console.log('Range:', range)
             if (range.collapsed) {
                 this.cursorPos += 1
                 let cP = this.getCursorPos()
@@ -136,9 +168,7 @@ class BakaEditor extends HTMLElement {
 
             if (ignore.indexOf(e.key) >= 0) {
                 setTimeout(() => {
-                    console.log('Before', this.cursorPos)
                     this.cursorPos = this.getCursorPos()
-                    console.log('After', this.cursorPos)
                 }, 1)
                 return
             }
@@ -149,7 +179,6 @@ class BakaEditor extends HTMLElement {
 
             let cP = this.getCursorPos()
             let range = this.getSelection()
-            console.log(`cP: ${cP}, index: ${index(node)}`)
 
             switch (e.key) {
                 case 'Enter':
@@ -211,7 +240,6 @@ class BakaEditor extends HTMLElement {
             if (n + line.innerText.length >= offset) return { line, n }
             n += line.innerText.length + 1
         }
-        console.log('Returning default')
         return { line: this.elms.editor.firstChild, n: 0 }
     }
 
@@ -219,8 +247,6 @@ class BakaEditor extends HTMLElement {
         let containerData = this.getContainerAtOffset(offset)
         let node = containerData.line
         let n = containerData.n
-
-        console.log(containerData)
 
         if (node.firstChild) node = node.firstChild
 
