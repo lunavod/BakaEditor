@@ -1,0 +1,22 @@
+body {
+    background: #5672ff05;
+    font-family: 'IBM Plex Sans', sans-serif;
+}
+
+#editor {
+    width: 700px;
+    height: 400px;
+    background: white;
+    margin: 128px;
+    box-shadow: rgba(0, 0, 255, 0.24) 0px 5px 24px;
+    padding: 6px;
+    border-radius: 5px;
+}
+
+#editor .empty {
+    height: 1em;
+}
+
+#editor:active {
+    outline: none;
+}
