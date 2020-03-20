@@ -1,124 +1,87 @@
-class Document {
-    text = ''
-    history = []
-
-    styling = {
-        bold: {
-            active: false,
-            ranges: []
-        }
-    }
-
-    insert(start, value) {
-        const historyItem = { type: 'insert', value, start }
-        this.history.push(historyItem)
-
-        let arr = Array.from(this.text)
-        arr.splice(start, 0, value)
-        this.text = arr.join('')
-
-        this.fireUpdate(historyItem)
-    }
-
-    replace(start, end, value) {
-        const historyItem = {
-            type: 'replace',
-            value,
-            start,
-            end,
-            oldValue: this.text.slice(start, end)
-        }
-        this.history.push(historyItem)
-
-        let arr = Array.from(this.text)
-        arr.splice(start, end - start, value)
-        this.text = arr.join('')
-
-        this.fireUpdate(historyItem)
-    }
-
-    delete(start, n, dir = 'back') {
-        const historyItem = { type: 'delete', n, start, dir }
-        this.history.push(historyItem)
-
-        let arr = Array.from(this.text)
-        arr.splice(start, n)
-        this.text = arr.join('')
-
-        this.fireUpdate(historyItem)
-    }
-
-    listeners = {}
-
-    addEventListener(event, callback) {
-        if (this.listeners[event]) {
-            this.listeners[event].push(callback)
-        } else {
-            this.listeners[event] = [callback]
-        }
-    }
-
-    fireUpdate(...data) {
-        const callbacks = this.listeners['update']
-        if (!callbacks) return
-        callbacks.forEach(callback => callback(...data))
-    }
-
-    toHtml() {
-        return this.text
-            .split('\n')
-            .map(
-                line =>
-                    `<div ${!line.length ? 'class="empty"' : ''}>${line.replace(
-                        / /gm,
-                        '&nbsp;'
-                    ) || ''}</div>`
-            )
-            .join('\n')
-    }
-}
-
-function index(el) {
-    if (!el) return -1
-    var i = 0
-    while ((el = el.previousElementSibling)) {
-        i++
-    }
-    return i
-}
+// import Document from './document'
 
 class BakaEditor extends HTMLElement {
     template = `<div id="wrapper">
         <div id="buttons">
             <a href="#" id="bold" class="">B</a>
+            <a href="#" id="italic" class="">I</a>
         </div>
         <div id="placeholder">Type something!</div>
         <div id="editor" contenteditable></div >
     </div>`
+
     elms = {}
-    cursorPos = 0
+
+    __cursorPos = 0
+    __cursorPosListeners = [
+        offset => {
+            console.log('Cursor position:', offset)
+        },
+        offset => {
+            const styles = Object.keys(this.document.getStylesAtOffset(offset))
+            this.elms.wrapper
+                .querySelectorAll('#buttons > a')
+                .forEach(el => el.classList.remove('active'))
+            styles.forEach(style => {
+                this.elms.buttons[style].classList.add('active')
+                this.document.styles[style].active = true
+            })
+        }
+    ]
+    get cursorPos() {
+        return this.__cursorPos
+    }
+    set cursorPos(val) {
+        this.__cursorPos = val
+        this.__cursorPosListeners.forEach(cb => setTimeout(() => cb(val), 1))
+    }
 
     connectedCallback() {
         this.innerHTML = this.template
+        this.elms.wrapper = this.querySelector('#wrapper')
         this.elms.editor = this.querySelector('#editor')
         this.elms.placeholder = this.querySelector('#placeholder')
         this.document = new Document()
         this.document.addEventListener('update', this.onTextUpdate.bind(this))
         this.document.addEventListener('update', this.logger.bind(this))
         this.initEditor()
+        this.initButtons()
+    }
+
+    initButtons() {
+        this.elms.buttons = {
+            wrapper: this.elms.wrapper.querySelector('#buttons'),
+            bold: this.elms.wrapper.querySelector('#buttons #bold')
+        }
+
+        this.elms.buttons.bold.addEventListener('click', e => {
+            this.elms.editor.focus()
+            this.document.styles.bold.active = !this.document.styles.bold.active
+            this.elms.buttons.bold.classList.toggle('active')
+
+            let range = this.getSelection()
+            if (!range.collapsed) {
+                console.log('bold', range.startOffset, range.endOffset)
+                this.cursorPos = range.endOffset
+                this.document.mark('bold', range.startOffset, range.endOffset)
+            }
+        })
     }
 
     logger(historyEvent) {
         console.log(
-            '\n%cFired event %s\n%c%s\n%c%s\n%s%o\n',
+            '\n%cFired event %s\n%c%s\n%s\n%c%s\n%s%o\n%s%o\n',
             ['font-weight: bold', 'margin-bottom: 6px'].join(';'),
             historyEvent.type.toUpperCase(),
             ['color: rgba(0,0,0,1)', 'padding-bottom: 6px'].join(';'),
             this.document.text,
+            this.document.toHtml(),
             ['color: rgba(0,0,0,.9)', 'line-height: 1.4em'].join(';'),
             `Document length: ${this.document.text.length}; Cursor position: ${this.cursorPos}`,
             'Event details:',
-            historyEvent
+            historyEvent,
+            'Bold ranges:',
+            this.document.styles.bold.ranges
         )
     }
 
@@ -133,6 +96,12 @@ class BakaEditor extends HTMLElement {
     }
 
     initEditor() {
+        if (this.document.text.length) {
+            this.elms.placeholder.classList.add('invisible')
+        } else {
+            this.elms.placeholder.classList.remove('invisible')
+        }
+
         this.elms.editor.innerHTML = this.document.toHtml()
 
         let ignore = [
@@ -162,9 +131,7 @@ class BakaEditor extends HTMLElement {
         })
 
         this.elms.editor.addEventListener('keydown', e => {
-            if (e.key.length === 1) {
-                return
-            }
+            if (e.key.length === 1) return
 
             if (ignore.indexOf(e.key) >= 0) {
                 setTimeout(() => {
@@ -234,13 +201,22 @@ class BakaEditor extends HTMLElement {
     }
 
     getContainerAtOffset(offset) {
-        let lines = this.elms.editor.querySelectorAll('*')
+        let lines = this.elms.editor.parentElement.querySelectorAll(
+            '#editor > div'
+        )
         let n = 0
         for (let line of lines) {
-            if (n + line.innerText.length >= offset) return { line, n }
-            n += line.innerText.length + 1
+            let nodes = line.childNodes
+            for (let node of nodes) {
+                let content = node
+                if (content.firstChild) content = content.firstChild
+
+                if (n + content.length >= offset) return { line: node, n }
+                n += content.length
+            }
+            n += 1
         }
-        return { line: this.elms.editor.firstChild, n: 0 }
+        return { line: lines[lines.length - 1], n: n - 1 }
     }
 
     setCursorPos(offset) {
@@ -268,8 +244,42 @@ class BakaEditor extends HTMLElement {
         return caretOffset
     }
 
+    getContainerOffset(container) {
+        let lines = this.elms.editor.parentElement.querySelectorAll(
+            '#editor > div'
+        )
+        let offset = 0
+        for (let line of lines) {
+            let elements = line.childNodes
+            for (let element of elements) {
+                let content = element
+                if (content.firstChild) content = content.firstChild
+
+                if (content === container) {
+                    return offset
+                }
+                offset += content.length
+            }
+            offset += 1
+        }
+        return offset
+    }
+
     getSelection() {
-        return window.getSelection().getRangeAt(0)
+        let range = window.getSelection().getRangeAt(0)
+        let result = {}
+        let firstOffset = this.getContainerOffset(range.startContainer)
+        let secondOffset = this.getContainerOffset(range.endContainer)
+
+        result.collapsed = range.collapsed
+
+        result.startContainer = range.startContainer
+        result.startOffset = range.startOffset + firstOffset
+
+        result.endContainer = range.endContainer
+        result.endOffset = range.endOffset + secondOffset
+
+        return result
     }
 }
 

@@ -56,6 +56,10 @@ body {
     font-weight: bold;
 }
 
+#buttons #italic {
+    font-style: italic;
+}
+
 #placeholder {
     position: absolute;
     width: 100%;
