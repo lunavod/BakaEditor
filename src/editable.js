@@ -32,11 +32,9 @@ class Editable extends HTMLElement {
         let offset = 0
         for (let node of nodes) {
             if (node === container) break
-            console.log(node)
             offset += node.length || 1
         }
 
-        console.log('GET CONTAINER AT OFFSET:', container, offset)
         return offset
     }
 
@@ -63,7 +61,6 @@ class Editable extends HTMLElement {
             lastNode = node
             if (x + (node.length || 1) >= offset) break
             x += node.length || 1
-            console.log('X:', x, 'Offset:', offset, 'Node:', node)
         }
         return { line: lastNode || nodes[0], n: x }
     }
@@ -74,6 +71,9 @@ class Editable extends HTMLElement {
         let n = containerData.n
 
         if (node.firstChild) node = node.firstChild
+        if (node.nodeName === 'BR') n = offset
+
+        console.log(offset, containerData)
 
         var range = window.getSelection().getRangeAt(0)
         range.setEnd(node, offset - n)

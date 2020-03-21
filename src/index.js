@@ -19,28 +19,44 @@ class BakaEditor extends HTMLElement {
         this.elms.wrapper = this.querySelector('#wrapper')
         this.elms.editor = this.querySelector('#editor')
         this.elms.placeholder = this.querySelector('#placeholder')
+        this.buttonsState = {}
         this.document = new Document()
         this.document.addEventListener('update', this.onTextUpdate.bind(this))
         this.document.addEventListener('update', this.logger.bind(this))
         this.initEditor()
         this.initButtons()
-    }
-
-    initButtons() {
         this.elms.editor.addCursorPosListener(offset => {
             console.log('Cursor position:', offset)
         })
-        this.elms.editor.addCursorPosListener(offset => {
-            const styles = Object.keys(this.document.getStylesAtOffset(offset))
-            console.log(this.document.getStylesAtOffset(offset))
-            this.elms.wrapper
-                .querySelectorAll('#buttons > a')
-                .forEach(el => el.classList.remove('active'))
-            styles.forEach(style => {
-                this.elms.buttons[style].classList.add('active')
-                this.document.styles[style].active = true
-            })
+    }
+
+    updateButtons() {
+        let range = this.elms.editor.getSelection()
+        let offset = range.startOffset
+
+        // console.log(
+        //     'Styles at range:',
+        //     this.document.getStylesAtRange(range.startOffset, range.endOffset)
+        // )
+        const styles = range.collapsed
+            ? Object.keys(this.document.getStylesAtOffset(offset))
+            : this.document.getStylesAtRange(range.startOffset, range.endOffset)
+        console.log(this.document.getStylesAtOffset(offset))
+        this.elms.wrapper
+            .querySelectorAll('#buttons > a')
+            .forEach(el => el.classList.remove('active'))
+        styles.forEach(style => {
+            this.elms.buttons[style].classList.add('active')
         })
+    }
+
+    initButtons() {
+        this.elms.editor.addCursorPosListener(() => this.updateButtons())
+        this.buttonsState = {
+            bold: false,
+            italic: false,
+            strike: false
+        }
         this.elms.buttons = {
             wrapper: this.elms.wrapper.querySelector('#buttons'),
             bold: this.elms.wrapper.querySelector('#buttons #bold'),
@@ -48,18 +64,43 @@ class BakaEditor extends HTMLElement {
             strike: this.elms.wrapper.querySelector('#buttons #strike')
         }
 
-        this.elms.buttons.bold.addEventListener('click', e => {
+        const onButtonClick = (buttonName, e) => {
+            e.preventDefault()
             this.elms.editor.focus()
-            this.document.styles.bold.active = !this.document.styles.bold.active
-            this.elms.buttons.bold.classList.toggle('active')
 
-            let range = this.elms.editor.getSelection()
+            const range = this.elms.editor.getSelection()
             if (!range.collapsed) {
-                console.log('bold', range.startOffset, range.endOffset)
+                const styles = this.document.getStylesAtRange(
+                    range.startOffset,
+                    range.endOffset
+                )
+                if (styles.indexOf(buttonName) >= 0) {
+                    this.document.unmark(
+                        buttonName,
+                        range.startOffset,
+                        range.endOffset
+                    )
+                } else {
+                    this.document.mark(
+                        buttonName,
+                        range.startOffset,
+                        range.endOffset
+                    )
+                }
                 this.elms.editor.cursorPos = range.endOffset
-                this.document.mark('bold', range.startOffset, range.endOffset)
+                this.elms.editor.setCursorPos(range.endOffset)
+                console.log(styles, range)
             }
-        })
+
+            this.elms.buttons[buttonName].classList.toggle('active')
+        }
+
+        for (let styleName in this.document.styles) {
+            this.elms.buttons[styleName].addEventListener('click', e =>
+                onButtonClick(styleName, e)
+            )
+        }
+        window.document.addEventListener('click', () => this.updateButtons())
     }
 
     logger(historyEvent) {

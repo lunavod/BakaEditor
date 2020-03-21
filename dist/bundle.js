@@ -94,7 +94,365 @@
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, \"default\", function() { return Document; });\nfunction _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError(\"Cannot call a class as a function\"); } }\n\nfunction _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if (\"value\" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }\n\nfunction _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }\n\nfunction _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }\n\nvar Document =\n/*#__PURE__*/\nfunction () {\n  function Document() {\n    _classCallCheck(this, Document);\n\n    _defineProperty(this, \"text\", 'aabb\\nbbaa');\n\n    _defineProperty(this, \"history\", []);\n\n    _defineProperty(this, \"styles\", {\n      bold: {\n        openTag: '<b>',\n        closeTag: '</b>',\n        active: false,\n        ranges: [[2, 7]]\n      },\n      italic: {\n        openTag: '<i>',\n        closeTag: '</i>',\n        ranges: [[6, 8]]\n      },\n      strike: {\n        openTag: '<s>',\n        closeTag: '</s>',\n        ranges: [[1, 4]]\n      }\n    });\n\n    _defineProperty(this, \"listeners\", {});\n  }\n\n  _createClass(Document, [{\n    key: \"getStylesAtOffset\",\n    value: function getStylesAtOffset(offset) {\n      var styles = {};\n\n      for (var _i = 0, _Object$keys = Object.keys(this.styles); _i < _Object$keys.length; _i++) {\n        var styleName = _Object$keys[_i];\n\n        for (var i = 0; i < this.styles[styleName].ranges.length; i++) {\n          var range = this.styles[styleName].ranges[i];\n          if (!(range[0] < offset && range[1] >= offset)) continue;\n          styles[styleName] = range;\n        }\n      }\n\n      return styles;\n    }\n  }, {\n    key: \"mark\",\n    value: function mark(styleName, start, end) {\n      var i;\n      var activeRange;\n\n      for (i = 0; i < this.styles[styleName].ranges.length; i++) {\n        var range = this.styles[styleName].ranges[i];\n        if (!(range[0] <= start && range[1] >= start)) continue;\n        activeRange = range;\n        break;\n      }\n\n      if (!activeRange) {\n        this.styles[styleName].ranges.push([start, end]);\n      } else if (activeRange[1] < end) {\n        this.styles[styleName].ranges[i][1] = end;\n      }\n\n      this.fireUpdate({\n        type: 'mark'\n      });\n    }\n  }, {\n    key: \"insert\",\n    value: function insert(start, value) {\n      var historyItem = {\n        type: 'insert',\n        value: value,\n        start: start\n      };\n      this.history.push(historyItem);\n\n      for (var styleName in this.styles) {\n        var ranges = this.styles[styleName].ranges;\n\n        for (var i = 0; i < ranges.length; i++) {\n          var range = ranges[i];\n          if (range[0] >= start) this.styles[styleName].ranges[i][0] += value.length;\n          if (range[1] >= start) this.styles[styleName].ranges[i][1] += value.length;\n        }\n      }\n\n      var arr = Array.from(this.text);\n      arr.splice(start, 0, value);\n      this.text = arr.join('');\n      this.fireUpdate(historyItem);\n    }\n  }, {\n    key: \"replace\",\n    value: function replace(start, end, value) {\n      this[\"delete\"](start, end - start);\n      if (value) this.insert(start, value);\n    }\n  }, {\n    key: \"delete\",\n    value: function _delete(start, n) {\n      var dir = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 'back';\n      var historyItem = {\n        type: 'delete',\n        n: n,\n        start: start,\n        dir: dir\n      };\n      this.history.push(historyItem);\n\n      for (var styleName in this.styles) {\n        var ranges = this.styles[styleName].ranges;\n        var remove = [];\n\n        for (var i = 0; i < ranges.length; i++) {\n          var range = ranges[i];\n\n          if (range[0] > start + n) {\n            console.log('1'); // Если после конца выделения - сдвинуть назад\n\n            this.styles[styleName].ranges[i][0] -= n;\n            this.styles[styleName].ranges[i][1] -= n;\n          }\n\n          if (range[0] >= start && range[1] <= start + n) {\n            console.log('2'); // Если полностью внутри выделения - удалить\n\n            remove.push(i);\n            continue;\n          }\n\n          if (range[0] > start && range[1] > start + n) {\n            console.log('3'); // Если начало внутри выделения, а конец снаружи\n\n            this.styles[styleName].ranges[i][0] = start;\n            this.styles[styleName].ranges[i][1] = range[1] - n;\n          }\n\n          if (range[0] < start && range[1] > start && range[1] < start + n) {\n            console.log('4'); // Если начало до выделения, а конец внутри\n\n            this.styles[styleName].ranges[i][1] = start;\n          }\n\n          if (range[0] < start && range[1] >= start + n) {\n            console.log('5'); // Если выделение полностью внутри\n\n            this.styles[styleName].ranges[i][1] = range[1] - n;\n          }\n\n          if (this.text[this.styles[styleName].ranges[i][1] - 1] === '\\n') {\n            console.log('6');\n            this.styles[styleName].ranges[i][1] -= 1;\n          }\n        }\n\n        for (var _i2 = 0, _remove = remove; _i2 < _remove.length; _i2++) {\n          var _i3 = _remove[_i2];\n          this.styles[styleName].ranges.splice(_i3, 1);\n        }\n      }\n\n      var arr = Array.from(this.text);\n      arr.splice(start, n);\n      this.text = arr.join('');\n      this.fireUpdate(historyItem);\n    }\n  }, {\n    key: \"addEventListener\",\n    value: function addEventListener(event, callback) {\n      if (this.listeners[event]) {\n        this.listeners[event].push(callback);\n      } else {\n        this.listeners[event] = [callback];\n      }\n    }\n  }, {\n    key: \"fireUpdate\",\n    value: function fireUpdate() {\n      for (var _len = arguments.length, data = new Array(_len), _key = 0; _key < _len; _key++) {\n        data[_key] = arguments[_key];\n      }\n\n      var callbacks = this.listeners['update'];\n      if (!callbacks) return;\n      callbacks.forEach(function (callback) {\n        return callback.apply(void 0, data);\n      });\n    }\n  }, {\n    key: \"toHtml\",\n    value: function toHtml() {\n      var _this = this;\n\n      var allRanges = [];\n      var nodes = [];\n      var result = '';\n\n      for (var styleName in this.styles) {\n        var _iteratorNormalCompletion = true;\n        var _didIteratorError = false;\n        var _iteratorError = undefined;\n\n        try {\n          for (var _iterator = this.styles[styleName].ranges[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {\n            var range = _step.value;\n            allRanges.push({\n              style: styleName,\n              range: range\n            });\n          }\n        } catch (err) {\n          _didIteratorError = true;\n          _iteratorError = err;\n        } finally {\n          try {\n            if (!_iteratorNormalCompletion && _iterator[\"return\"] != null) {\n              _iterator[\"return\"]();\n            }\n          } finally {\n            if (_didIteratorError) {\n              throw _iteratorError;\n            }\n          }\n        }\n      }\n\n      var getStylesAtOffset = function getStylesAtOffset(offset) {\n        return allRanges.filter(function (rangeData) {\n          var range = rangeData.range;\n          return range[0] <= offset && range[1] > offset;\n        }).map(function (rangeData) {\n          return rangeData.style;\n        });\n      };\n\n      var stylesEqual = function stylesEqual(a, b) {\n        if (a.length !== b.length) return false;\n        return !a.filter(function (el) {\n          return b.indexOf(el) < 0;\n        }).length;\n      };\n\n      var currentNode = {\n        styles: getStylesAtOffset(0),\n        text: this.text[0],\n        start: 0,\n        end: 1\n      };\n\n      for (var i = 1; i < this.text.length; i++) {\n        var ch = this.text[i];\n        var styles = getStylesAtOffset(i);\n\n        if (stylesEqual(currentNode.styles, styles)) {\n          currentNode.end = i;\n          currentNode.text += ch;\n          continue;\n        }\n\n        nodes.push(currentNode);\n        currentNode = {\n          styles: styles,\n          text: ch,\n          start: i,\n          end: i + 1\n        };\n      }\n\n      nodes.push(currentNode);\n\n      for (var _i4 = 0, _nodes = nodes; _i4 < _nodes.length; _i4++) {\n        var node = _nodes[_i4];\n        var start = node.styles.map(function (styleName) {\n          return _this.styles[styleName].openTag;\n        }).join('');\n        var end = node.styles.map(function (styleName) {\n          return _this.styles[styleName].closeTag;\n        }).join('');\n        result += start + node.text + end;\n      }\n\n      result = result.replace(/\\n/gm, '<br/>');\n      return result;\n    }\n  }]);\n\n  return Document;\n}();\n\n\n\n//# sourceURL=webpack:///./src/document.js?");
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "default", function() { return Document; });
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+var Document =
+/*#__PURE__*/
+function () {
+  function Document() {
+    _classCallCheck(this, Document);
+
+    _defineProperty(this, "text", 'aabb\nbbaa');
+
+    _defineProperty(this, "history", []);
+
+    _defineProperty(this, "styles", {
+      bold: {
+        openTag: '<b>',
+        closeTag: '</b>',
+        active: false,
+        ranges: [[2, 7]]
+      },
+      italic: {
+        openTag: '<i>',
+        closeTag: '</i>',
+        ranges: [[6, 8]]
+      },
+      strike: {
+        openTag: '<s>',
+        closeTag: '</s>',
+        ranges: [[1, 4]]
+      }
+    });
+
+    _defineProperty(this, "listeners", {});
+  }
+
+  _createClass(Document, [{
+    key: "getStylesAtOffset",
+    value: function getStylesAtOffset(offset) {
+      var styles = {};
+
+      for (var styleName in this.styles) {
+        for (var i = 0; i < this.styles[styleName].ranges.length; i++) {
+          var range = this.styles[styleName].ranges[i];
+          if (!(range[0] < offset && range[1] >= offset)) continue;
+          styles[styleName] = range;
+        }
+      }
+
+      return styles;
+    }
+  }, {
+    key: "getStylesAtRange",
+    value: function getStylesAtRange(start, end) {
+      var styles = [];
+
+      for (var styleName in this.styles) {
+        for (var i = 0; i < this.styles[styleName].ranges.length; i++) {
+          var range = this.styles[styleName].ranges[i];
+          if (!(range[0] >= start && range[0] < end || // Начало в выделении
+          range[1] > start && range[1] <= end || // Конец в выделении
+          range[0] <= start && range[1] >= end)) continue;
+          styles.push(styleName);
+        }
+      }
+
+      return styles;
+    }
+  }, {
+    key: "mark",
+    value: function mark(styleName, start, end) {
+      var i;
+      var activeRange;
+
+      for (i = 0; i < this.styles[styleName].ranges.length; i++) {
+        var range = this.styles[styleName].ranges[i];
+        if (!(range[0] <= start && range[1] >= start)) continue;
+        activeRange = range;
+        break;
+      }
+
+      if (!activeRange) {
+        this.styles[styleName].ranges.push([start, end]);
+      } else if (activeRange[1] < end) {
+        this.styles[styleName].ranges[i][1] = end;
+      }
+
+      this.fireUpdate({
+        type: 'mark'
+      });
+    }
+  }, {
+    key: "unmark",
+    value: function unmark(styleName, start, end) {
+      console.log('UNMARK', styleName, start, end);
+      var activeRanges = [];
+
+      for (var i = 0; i < this.styles[styleName].ranges.length; i++) {
+        var range = this.styles[styleName].ranges[i];
+        console.log('RAAAAANGE', range);
+        if (!(range[0] >= start && range[0] <= end || // Начало в выделении
+        range[1] >= start && range[1] <= end || // Конец в выделении
+        range[0] <= start && range[1] >= end)) continue;
+        activeRanges.push(i);
+        break;
+      }
+
+      console.log('Active ranges:', activeRanges, this.styles[styleName].ranges);
+
+      for (var _i = 0, _activeRanges = activeRanges; _i < _activeRanges.length; _i++) {
+        var _i2 = _activeRanges[_i];
+        var _range = this.styles[styleName].ranges[_i2];
+
+        if (_range[0] >= start && _range[0] <= end && _range[1] > end) {
+          console.log('1'); // Начало в выделении, конец нет
+
+          this.styles[styleName].ranges[_i2][0] = end;
+        }
+
+        if (_range[1] >= start && _range[1] <= end && _range[0] < start) {
+          console.log('2'); // Конец в выделении, начало нет
+
+          this.styles[styleName].ranges[_i2][1] = start;
+        }
+
+        if (_range[0] >= start && _range[1] <= end) {
+          console.log('3');
+          this.styles[styleName].ranges.splice(_i2, 1);
+        }
+      }
+
+      this.fireUpdate({
+        type: 'mark'
+      });
+    }
+  }, {
+    key: "insert",
+    value: function insert(start, value) {
+      var historyItem = {
+        type: 'insert',
+        value: value,
+        start: start
+      };
+      this.history.push(historyItem);
+
+      for (var styleName in this.styles) {
+        var ranges = this.styles[styleName].ranges;
+
+        for (var i = 0; i < ranges.length; i++) {
+          var range = ranges[i];
+          if (range[0] >= start) this.styles[styleName].ranges[i][0] += value.length;
+          if (range[1] >= start) this.styles[styleName].ranges[i][1] += value.length;
+        }
+      }
+
+      var arr = Array.from(this.text);
+      arr.splice(start, 0, value);
+      this.text = arr.join('');
+      this.fireUpdate(historyItem);
+    }
+  }, {
+    key: "replace",
+    value: function replace(start, end, value) {
+      this["delete"](start, end - start);
+      if (value) this.insert(start, value);
+    }
+  }, {
+    key: "delete",
+    value: function _delete(start, n) {
+      var dir = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 'back';
+      var historyItem = {
+        type: 'delete',
+        n: n,
+        start: start,
+        dir: dir
+      };
+      this.history.push(historyItem);
+
+      for (var styleName in this.styles) {
+        var ranges = this.styles[styleName].ranges;
+        var remove = [];
+
+        for (var i = 0; i < ranges.length; i++) {
+          var range = ranges[i];
+
+          if (range[0] > start + n) {
+            // Если после конца выделения - сдвинуть назад
+            this.styles[styleName].ranges[i][0] -= n;
+            this.styles[styleName].ranges[i][1] -= n;
+          }
+
+          if (range[0] >= start && range[1] <= start + n) {
+            // Если полностью внутри выделения - удалить
+            remove.push(i);
+            continue;
+          }
+
+          if (range[0] > start && range[1] > start + n) {
+            // Если начало внутри выделения, а конец снаружи
+            this.styles[styleName].ranges[i][0] = start;
+            this.styles[styleName].ranges[i][1] = range[1] - n;
+          }
+
+          if (range[0] < start && range[1] > start && range[1] < start + n) {
+            // Если начало до выделения, а конец внутри
+            this.styles[styleName].ranges[i][1] = start;
+          }
+
+          if (range[0] < start && range[1] >= start + n) {
+            // Если выделение полностью внутри
+            this.styles[styleName].ranges[i][1] = range[1] - n;
+          }
+
+          if (this.text[this.styles[styleName].ranges[i][1] - 1] === '\n') {
+            this.styles[styleName].ranges[i][1] -= 1;
+          }
+        }
+
+        for (var _i3 = 0, _remove = remove; _i3 < _remove.length; _i3++) {
+          var _i4 = _remove[_i3];
+          this.styles[styleName].ranges.splice(_i4, 1);
+        }
+      }
+
+      var arr = Array.from(this.text);
+      arr.splice(start, n);
+      this.text = arr.join('');
+      this.fireUpdate(historyItem);
+    }
+  }, {
+    key: "addEventListener",
+    value: function addEventListener(event, callback) {
+      if (this.listeners[event]) {
+        this.listeners[event].push(callback);
+      } else {
+        this.listeners[event] = [callback];
+      }
+    }
+  }, {
+    key: "fireUpdate",
+    value: function fireUpdate() {
+      for (var _len = arguments.length, data = new Array(_len), _key = 0; _key < _len; _key++) {
+        data[_key] = arguments[_key];
+      }
+
+      var callbacks = this.listeners['update'];
+      if (!callbacks) return;
+      callbacks.forEach(function (callback) {
+        return callback.apply(void 0, data);
+      });
+    }
+  }, {
+    key: "toHtml",
+    value: function toHtml() {
+      var _this = this;
+
+      var allRanges = [];
+      var nodes = [];
+      var result = '';
+
+      for (var styleName in this.styles) {
+        var _iteratorNormalCompletion = true;
+        var _didIteratorError = false;
+        var _iteratorError = undefined;
+
+        try {
+          for (var _iterator = this.styles[styleName].ranges[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+            var range = _step.value;
+            allRanges.push({
+              style: styleName,
+              range: range
+            });
+          }
+        } catch (err) {
+          _didIteratorError = true;
+          _iteratorError = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion && _iterator["return"] != null) {
+              _iterator["return"]();
+            }
+          } finally {
+            if (_didIteratorError) {
+              throw _iteratorError;
+            }
+          }
+        }
+      }
+
+      var getStylesAtOffset = function getStylesAtOffset(offset) {
+        return allRanges.filter(function (rangeData) {
+          var range = rangeData.range;
+          return range[0] <= offset && range[1] > offset;
+        }).map(function (rangeData) {
+          return rangeData.style;
+        });
+      };
+
+      var stylesEqual = function stylesEqual(a, b) {
+        if (a.length !== b.length) return false;
+        return !a.filter(function (el) {
+          return b.indexOf(el) < 0;
+        }).length;
+      };
+
+      var currentNode = {
+        styles: getStylesAtOffset(0),
+        text: this.text[0],
+        start: 0,
+        end: 1
+      };
+
+      for (var i = 1; i < this.text.length; i++) {
+        var ch = this.text[i];
+        var styles = getStylesAtOffset(i);
+
+        if (stylesEqual(currentNode.styles, styles)) {
+          currentNode.end = i;
+          currentNode.text += ch;
+          continue;
+        }
+
+        nodes.push(currentNode);
+        currentNode = {
+          styles: styles,
+          text: ch,
+          start: i,
+          end: i + 1
+        };
+      }
+
+      nodes.push(currentNode);
+
+      for (var _i5 = 0, _nodes = nodes; _i5 < _nodes.length; _i5++) {
+        var node = _nodes[_i5];
+        var start = node.styles.map(function (styleName) {
+          return _this.styles[styleName].openTag;
+        }).join('');
+        var end = node.styles.map(function (styleName) {
+          return _this.styles[styleName].closeTag;
+        }).join('');
+        result += start + node.text + end;
+      }
+
+      result = result.replace(/\n/gm, '<br/>');
+      return result;
+    }
+  }]);
+
+  return Document;
+}();
+
+
 
 /***/ }),
 
@@ -105,7 +463,260 @@ eval("__webpack_require__.r(__webpack_exports__);\n/* harmony export (binding) *
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-eval("function _typeof(obj) { if (typeof Symbol === \"function\" && typeof Symbol.iterator === \"symbol\") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === \"function\" && obj.constructor === Symbol && obj !== Symbol.prototype ? \"symbol\" : typeof obj; }; } return _typeof(obj); }\n\nfunction _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError(\"Cannot call a class as a function\"); } }\n\nfunction _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if (\"value\" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }\n\nfunction _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }\n\nfunction _createSuper(Derived) {\n  function isNativeReflectConstruct() {\n    if (typeof Reflect === \"undefined\" || !Reflect.construct) return false;\n    if (Reflect.construct.sham) return false;\n    if (typeof Proxy === \"function\") return true;\n\n    try {\n      Date.prototype.toString.call(Reflect.construct(Date, [], function () {}));\n      return true;\n    } catch (e) {\n      return false;\n    }\n  }\n\n  return function () {\n    var Super = _getPrototypeOf(Derived),\n        result;\n\n    if (isNativeReflectConstruct()) {\n      var NewTarget = _getPrototypeOf(this).constructor;\n\n      result = Reflect.construct(Super, arguments, NewTarget);\n    } else {\n      result = Super.apply(this, arguments);\n    }\n\n    return _possibleConstructorReturn(this, result);\n  };\n}\n\nfunction _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === \"object\" || typeof call === \"function\")) { return call; } return _assertThisInitialized(self); }\n\nfunction _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError(\"this hasn't been initialised - super() hasn't been called\"); } return self; }\n\nfunction _inherits(subClass, superClass) { if (typeof superClass !== \"function\" && superClass !== null) { throw new TypeError(\"Super expression must either be null or a function\"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }\n\nfunction _wrapNativeSuper(Class) { var _cache = typeof Map === \"function\" ? new Map() : undefined; _wrapNativeSuper = function _wrapNativeSuper(Class) { if (Class === null || !_isNativeFunction(Class)) return Class; if (typeof Class !== \"function\") { throw new TypeError(\"Super expression must either be null or a function\"); } if (typeof _cache !== \"undefined\") { if (_cache.has(Class)) return _cache.get(Class); _cache.set(Class, Wrapper); } function Wrapper() { return _construct(Class, arguments, _getPrototypeOf(this).constructor); } Wrapper.prototype = Object.create(Class.prototype, { constructor: { value: Wrapper, enumerable: false, writable: true, configurable: true } }); return _setPrototypeOf(Wrapper, Class); }; return _wrapNativeSuper(Class); }\n\nfunction isNativeReflectConstruct() { if (typeof Reflect === \"undefined\" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === \"function\") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }\n\nfunction _construct(Parent, args, Class) { if (isNativeReflectConstruct()) { _construct = Reflect.construct; } else { _construct = function _construct(Parent, args, Class) { var a = [null]; a.push.apply(a, args); var Constructor = Function.bind.apply(Parent, a); var instance = new Constructor(); if (Class) _setPrototypeOf(instance, Class.prototype); return instance; }; } return _construct.apply(null, arguments); }\n\nfunction _isNativeFunction(fn) { return Function.toString.call(fn).indexOf(\"[native code]\") !== -1; }\n\nfunction _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }\n\nfunction _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }\n\nfunction _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }\n\nvar Editable =\n/*#__PURE__*/\nfunction (_HTMLElement) {\n  _inherits(Editable, _HTMLElement);\n\n  var _super = _createSuper(Editable);\n\n  function Editable() {\n    var _this;\n\n    _classCallCheck(this, Editable);\n\n    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {\n      args[_key] = arguments[_key];\n    }\n\n    _this = _super.call.apply(_super, [this].concat(args));\n\n    _defineProperty(_assertThisInitialized(_this), \"__cursorPos\", 0);\n\n    _defineProperty(_assertThisInitialized(_this), \"__cursorPosListeners\", []);\n\n    return _this;\n  }\n\n  _createClass(Editable, [{\n    key: \"connectedCallback\",\n    value: function connectedCallback() {\n      this.setAttribute('contenteditable', true);\n    }\n  }, {\n    key: \"addCursorPosListener\",\n    value: function addCursorPosListener(cb) {\n      this.__cursorPosListeners.push(cb);\n    }\n  }, {\n    key: \"getContainerOffset\",\n    value: function getContainerOffset(container) {\n      var nodes = Array.from(this.childNodes);\n\n      while (nodes.filter(function (node) {\n        return node.childNodes.length;\n      }).length) {\n        nodes = nodes.map(function (el) {\n          return el.nodeName === '#text' || el.nodeName === 'BR' ? [el] : Array.from(el.childNodes);\n        }).flat(Infinity);\n      }\n\n      var offset = 0;\n      var _iteratorNormalCompletion = true;\n      var _didIteratorError = false;\n      var _iteratorError = undefined;\n\n      try {\n        for (var _iterator = nodes[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {\n          var node = _step.value;\n          if (node === container) break;\n          console.log(node);\n          offset += node.length || 1;\n        }\n      } catch (err) {\n        _didIteratorError = true;\n        _iteratorError = err;\n      } finally {\n        try {\n          if (!_iteratorNormalCompletion && _iterator[\"return\"] != null) {\n            _iterator[\"return\"]();\n          }\n        } finally {\n          if (_didIteratorError) {\n            throw _iteratorError;\n          }\n        }\n      }\n\n      console.log('GET CONTAINER AT OFFSET:', container, offset);\n      return offset;\n    }\n  }, {\n    key: \"getContainerAtOffset\",\n    value: function getContainerAtOffset(offset) {\n      var nodes = Array.from(this.childNodes);\n\n      while (nodes.filter(function (node) {\n        return node.childNodes.length;\n      }).length) {\n        nodes = nodes.map(function (el) {\n          return el.nodeName === '#text' || el.nodeName === 'BR' ? [el] : Array.from(el.childNodes);\n        }).flat(Infinity);\n      }\n\n      console.log(nodes);\n      var lastNode;\n      var x = 0;\n      var _iteratorNormalCompletion2 = true;\n      var _didIteratorError2 = false;\n      var _iteratorError2 = undefined;\n\n      try {\n        for (var _iterator2 = nodes[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {\n          var node = _step2.value;\n\n          if (node.nodeName !== '#text' && node.nodeName !== 'BR') {\n            if (!node.firstChild) continue;\n            node = node.firstChild;\n          }\n\n          lastNode = node;\n          if (x + (node.length || 1) >= offset) break;\n          x += node.length || 1;\n          console.log('X:', x, 'Offset:', offset, 'Node:', node);\n        }\n      } catch (err) {\n        _didIteratorError2 = true;\n        _iteratorError2 = err;\n      } finally {\n        try {\n          if (!_iteratorNormalCompletion2 && _iterator2[\"return\"] != null) {\n            _iterator2[\"return\"]();\n          }\n        } finally {\n          if (_didIteratorError2) {\n            throw _iteratorError2;\n          }\n        }\n      }\n\n      return {\n        line: lastNode || nodes[0],\n        n: x\n      };\n    }\n  }, {\n    key: \"setCursorPos\",\n    value: function setCursorPos(offset) {\n      var containerData = this.getContainerAtOffset(offset);\n      var node = containerData.line;\n      var n = containerData.n;\n      if (node.firstChild) node = node.firstChild;\n      var range = window.getSelection().getRangeAt(0);\n      range.setEnd(node, offset - n);\n      range.setStart(node, offset - n);\n    }\n  }, {\n    key: \"getCursorPos\",\n    value: function getCursorPos() {\n      var caretOffset = 0;\n      var range = window.getSelection().getRangeAt(0);\n      var selected = range.toString().length;\n      var preCaretRange = range.cloneRange();\n      preCaretRange.selectNodeContents(this);\n      preCaretRange.setEnd(range.endContainer, range.endOffset);\n      caretOffset = preCaretRange.toString().length - selected;\n      var brCount = Array.from(preCaretRange.cloneContents().childNodes).map(function (el) {\n        return el.nodeName === '#text' ? [] : Array.from(el.querySelectorAll('*'));\n      }).flat(Infinity).filter(function (el) {\n        return el.nodeName === 'BR';\n      }).length;\n      caretOffset += brCount;\n      return caretOffset;\n    }\n  }, {\n    key: \"getSelection\",\n    value: function getSelection() {\n      var range = window.getSelection().getRangeAt(0);\n      var result = {};\n      var firstOffset = this.getContainerOffset(range.startContainer);\n      var secondOffset = this.getContainerOffset(range.endContainer);\n      result.collapsed = range.collapsed;\n      result.startContainer = range.startContainer;\n      result.startOffset = range.startOffset + firstOffset;\n      result.endContainer = range.endContainer;\n      result.endOffset = range.endOffset + secondOffset;\n      return result;\n    }\n  }, {\n    key: \"cursorPos\",\n    get: function get() {\n      return this.__cursorPos;\n    },\n    set: function set(val) {\n      this.__cursorPos = val;\n\n      this.__cursorPosListeners.forEach(function (cb) {\n        return setTimeout(function () {\n          return cb(val);\n        }, 1);\n      });\n    }\n  }]);\n\n  return Editable;\n}(\n/*#__PURE__*/\n_wrapNativeSuper(HTMLElement));\n\ncustomElements.define('baka-editable', Editable);\n\n//# sourceURL=webpack:///./src/editable.js?");
+function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+function _createSuper(Derived) {
+  function isNativeReflectConstruct() {
+    if (typeof Reflect === "undefined" || !Reflect.construct) return false;
+    if (Reflect.construct.sham) return false;
+    if (typeof Proxy === "function") return true;
+
+    try {
+      Date.prototype.toString.call(Reflect.construct(Date, [], function () {}));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  return function () {
+    var Super = _getPrototypeOf(Derived),
+        result;
+
+    if (isNativeReflectConstruct()) {
+      var NewTarget = _getPrototypeOf(this).constructor;
+
+      result = Reflect.construct(Super, arguments, NewTarget);
+    } else {
+      result = Super.apply(this, arguments);
+    }
+
+    return _possibleConstructorReturn(this, result);
+  };
+}
+
+function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
+
+function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
+
+function _wrapNativeSuper(Class) { var _cache = typeof Map === "function" ? new Map() : undefined; _wrapNativeSuper = function _wrapNativeSuper(Class) { if (Class === null || !_isNativeFunction(Class)) return Class; if (typeof Class !== "function") { throw new TypeError("Super expression must either be null or a function"); } if (typeof _cache !== "undefined") { if (_cache.has(Class)) return _cache.get(Class); _cache.set(Class, Wrapper); } function Wrapper() { return _construct(Class, arguments, _getPrototypeOf(this).constructor); } Wrapper.prototype = Object.create(Class.prototype, { constructor: { value: Wrapper, enumerable: false, writable: true, configurable: true } }); return _setPrototypeOf(Wrapper, Class); }; return _wrapNativeSuper(Class); }
+
+function isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }
+
+function _construct(Parent, args, Class) { if (isNativeReflectConstruct()) { _construct = Reflect.construct; } else { _construct = function _construct(Parent, args, Class) { var a = [null]; a.push.apply(a, args); var Constructor = Function.bind.apply(Parent, a); var instance = new Constructor(); if (Class) _setPrototypeOf(instance, Class.prototype); return instance; }; } return _construct.apply(null, arguments); }
+
+function _isNativeFunction(fn) { return Function.toString.call(fn).indexOf("[native code]") !== -1; }
+
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+var Editable =
+/*#__PURE__*/
+function (_HTMLElement) {
+  _inherits(Editable, _HTMLElement);
+
+  var _super = _createSuper(Editable);
+
+  function Editable() {
+    var _this;
+
+    _classCallCheck(this, Editable);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty(_assertThisInitialized(_this), "__cursorPos", 0);
+
+    _defineProperty(_assertThisInitialized(_this), "__cursorPosListeners", []);
+
+    return _this;
+  }
+
+  _createClass(Editable, [{
+    key: "connectedCallback",
+    value: function connectedCallback() {
+      this.setAttribute('contenteditable', true);
+    }
+  }, {
+    key: "addCursorPosListener",
+    value: function addCursorPosListener(cb) {
+      this.__cursorPosListeners.push(cb);
+    }
+  }, {
+    key: "getContainerOffset",
+    value: function getContainerOffset(container) {
+      var nodes = Array.from(this.childNodes);
+
+      while (nodes.filter(function (node) {
+        return node.childNodes.length;
+      }).length) {
+        nodes = nodes.map(function (el) {
+          return el.nodeName === '#text' || el.nodeName === 'BR' ? [el] : Array.from(el.childNodes);
+        }).flat(Infinity);
+      }
+
+      var offset = 0;
+      var _iteratorNormalCompletion = true;
+      var _didIteratorError = false;
+      var _iteratorError = undefined;
+
+      try {
+        for (var _iterator = nodes[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+          var node = _step.value;
+          if (node === container) break;
+          offset += node.length || 1;
+        }
+      } catch (err) {
+        _didIteratorError = true;
+        _iteratorError = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion && _iterator["return"] != null) {
+            _iterator["return"]();
+          }
+        } finally {
+          if (_didIteratorError) {
+            throw _iteratorError;
+          }
+        }
+      }
+
+      return offset;
+    }
+  }, {
+    key: "getContainerAtOffset",
+    value: function getContainerAtOffset(offset) {
+      var nodes = Array.from(this.childNodes);
+
+      while (nodes.filter(function (node) {
+        return node.childNodes.length;
+      }).length) {
+        nodes = nodes.map(function (el) {
+          return el.nodeName === '#text' || el.nodeName === 'BR' ? [el] : Array.from(el.childNodes);
+        }).flat(Infinity);
+      }
+
+      console.log(nodes);
+      var lastNode;
+      var x = 0;
+      var _iteratorNormalCompletion2 = true;
+      var _didIteratorError2 = false;
+      var _iteratorError2 = undefined;
+
+      try {
+        for (var _iterator2 = nodes[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+          var node = _step2.value;
+
+          if (node.nodeName !== '#text' && node.nodeName !== 'BR') {
+            if (!node.firstChild) continue;
+            node = node.firstChild;
+          }
+
+          lastNode = node;
+          if (x + (node.length || 1) >= offset) break;
+          x += node.length || 1;
+        }
+      } catch (err) {
+        _didIteratorError2 = true;
+        _iteratorError2 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion2 && _iterator2["return"] != null) {
+            _iterator2["return"]();
+          }
+        } finally {
+          if (_didIteratorError2) {
+            throw _iteratorError2;
+          }
+        }
+      }
+
+      return {
+        line: lastNode || nodes[0],
+        n: x
+      };
+    }
+  }, {
+    key: "setCursorPos",
+    value: function setCursorPos(offset) {
+      var containerData = this.getContainerAtOffset(offset);
+      var node = containerData.line;
+      var n = containerData.n;
+      if (node.firstChild) node = node.firstChild;
+      if (node.nodeName === 'BR') n = offset;
+      console.log(offset, containerData);
+      var range = window.getSelection().getRangeAt(0);
+      range.setEnd(node, offset - n);
+      range.setStart(node, offset - n);
+    }
+  }, {
+    key: "getCursorPos",
+    value: function getCursorPos() {
+      var caretOffset = 0;
+      var range = window.getSelection().getRangeAt(0);
+      var selected = range.toString().length;
+      var preCaretRange = range.cloneRange();
+      preCaretRange.selectNodeContents(this);
+      preCaretRange.setEnd(range.endContainer, range.endOffset);
+      caretOffset = preCaretRange.toString().length - selected;
+      var brCount = Array.from(preCaretRange.cloneContents().childNodes).map(function (el) {
+        return el.nodeName === '#text' ? [] : Array.from(el.querySelectorAll('*'));
+      }).flat(Infinity).filter(function (el) {
+        return el.nodeName === 'BR';
+      }).length;
+      caretOffset += brCount;
+      return caretOffset;
+    }
+  }, {
+    key: "getSelection",
+    value: function getSelection() {
+      var range = window.getSelection().getRangeAt(0);
+      var result = {};
+      var firstOffset = this.getContainerOffset(range.startContainer);
+      var secondOffset = this.getContainerOffset(range.endContainer);
+      result.collapsed = range.collapsed;
+      result.startContainer = range.startContainer;
+      result.startOffset = range.startOffset + firstOffset;
+      result.endContainer = range.endContainer;
+      result.endOffset = range.endOffset + secondOffset;
+      return result;
+    }
+  }, {
+    key: "cursorPos",
+    get: function get() {
+      return this.__cursorPos;
+    },
+    set: function set(val) {
+      this.__cursorPos = val;
+
+      this.__cursorPosListeners.forEach(function (cb) {
+        return setTimeout(function () {
+          return cb(val);
+        }, 1);
+      });
+    }
+  }]);
+
+  return Editable;
+}(
+/*#__PURE__*/
+_wrapNativeSuper(HTMLElement));
+
+customElements.define('baka-editable', Editable);
 
 /***/ }),
 
@@ -117,8 +728,319 @@ eval("function _typeof(obj) { if (typeof Symbol === \"function\" && typeof Symbo
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-eval("__webpack_require__.r(__webpack_exports__);\n/* harmony import */ var _document__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./document */ \"./src/document.js\");\n/* harmony import */ var _editable__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./editable */ \"./src/editable.js\");\n/* harmony import */ var _editable__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_editable__WEBPACK_IMPORTED_MODULE_1__);\nfunction _typeof(obj) { if (typeof Symbol === \"function\" && typeof Symbol.iterator === \"symbol\") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === \"function\" && obj.constructor === Symbol && obj !== Symbol.prototype ? \"symbol\" : typeof obj; }; } return _typeof(obj); }\n\nfunction _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError(\"Cannot call a class as a function\"); } }\n\nfunction _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if (\"value\" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }\n\nfunction _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }\n\nfunction _createSuper(Derived) {\n  function isNativeReflectConstruct() {\n    if (typeof Reflect === \"undefined\" || !Reflect.construct) return false;\n    if (Reflect.construct.sham) return false;\n    if (typeof Proxy === \"function\") return true;\n\n    try {\n      Date.prototype.toString.call(Reflect.construct(Date, [], function () {}));\n      return true;\n    } catch (e) {\n      return false;\n    }\n  }\n\n  return function () {\n    var Super = _getPrototypeOf(Derived),\n        result;\n\n    if (isNativeReflectConstruct()) {\n      var NewTarget = _getPrototypeOf(this).constructor;\n\n      result = Reflect.construct(Super, arguments, NewTarget);\n    } else {\n      result = Super.apply(this, arguments);\n    }\n\n    return _possibleConstructorReturn(this, result);\n  };\n}\n\nfunction _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === \"object\" || typeof call === \"function\")) { return call; } return _assertThisInitialized(self); }\n\nfunction _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError(\"this hasn't been initialised - super() hasn't been called\"); } return self; }\n\nfunction _inherits(subClass, superClass) { if (typeof superClass !== \"function\" && superClass !== null) { throw new TypeError(\"Super expression must either be null or a function\"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }\n\nfunction _wrapNativeSuper(Class) { var _cache = typeof Map === \"function\" ? new Map() : undefined; _wrapNativeSuper = function _wrapNativeSuper(Class) { if (Class === null || !_isNativeFunction(Class)) return Class; if (typeof Class !== \"function\") { throw new TypeError(\"Super expression must either be null or a function\"); } if (typeof _cache !== \"undefined\") { if (_cache.has(Class)) return _cache.get(Class); _cache.set(Class, Wrapper); } function Wrapper() { return _construct(Class, arguments, _getPrototypeOf(this).constructor); } Wrapper.prototype = Object.create(Class.prototype, { constructor: { value: Wrapper, enumerable: false, writable: true, configurable: true } }); return _setPrototypeOf(Wrapper, Class); }; return _wrapNativeSuper(Class); }\n\nfunction isNativeReflectConstruct() { if (typeof Reflect === \"undefined\" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === \"function\") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }\n\nfunction _construct(Parent, args, Class) { if (isNativeReflectConstruct()) { _construct = Reflect.construct; } else { _construct = function _construct(Parent, args, Class) { var a = [null]; a.push.apply(a, args); var Constructor = Function.bind.apply(Parent, a); var instance = new Constructor(); if (Class) _setPrototypeOf(instance, Class.prototype); return instance; }; } return _construct.apply(null, arguments); }\n\nfunction _isNativeFunction(fn) { return Function.toString.call(fn).indexOf(\"[native code]\") !== -1; }\n\nfunction _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }\n\nfunction _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }\n\nfunction _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }\n\n\n\n\nvar BakaEditor =\n/*#__PURE__*/\nfunction (_HTMLElement) {\n  _inherits(BakaEditor, _HTMLElement);\n\n  var _super = _createSuper(BakaEditor);\n\n  function BakaEditor() {\n    var _this;\n\n    _classCallCheck(this, BakaEditor);\n\n    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {\n      args[_key] = arguments[_key];\n    }\n\n    _this = _super.call.apply(_super, [this].concat(args));\n\n    _defineProperty(_assertThisInitialized(_this), \"template\", \"<div id=\\\"wrapper\\\">\\n        <div id=\\\"buttons\\\">\\n            <a href=\\\"#\\\" id=\\\"bold\\\" class=\\\"\\\">B</a>\\n            <a href=\\\"#\\\" id=\\\"italic\\\" class=\\\"\\\">I</a>\\n            <a href=\\\"#\\\" id=\\\"strike\\\" class=\\\"\\\">S</a>\\n        </div>\\n        <div id=\\\"placeholder\\\">Type something!</div>\\n        <baka-editable id=\\\"editor\\\" />\\n    </div>\");\n\n    _defineProperty(_assertThisInitialized(_this), \"elms\", {});\n\n    return _this;\n  }\n\n  _createClass(BakaEditor, [{\n    key: \"connectedCallback\",\n    value: function connectedCallback() {\n      this.innerHTML = this.template;\n      this.elms.wrapper = this.querySelector('#wrapper');\n      this.elms.editor = this.querySelector('#editor');\n      this.elms.placeholder = this.querySelector('#placeholder');\n      this.document = new _document__WEBPACK_IMPORTED_MODULE_0__[\"default\"]();\n      this.document.addEventListener('update', this.onTextUpdate.bind(this));\n      this.document.addEventListener('update', this.logger.bind(this));\n      this.initEditor();\n      this.initButtons();\n    }\n  }, {\n    key: \"initButtons\",\n    value: function initButtons() {\n      var _this2 = this;\n\n      this.elms.editor.addCursorPosListener(function (offset) {\n        console.log('Cursor position:', offset);\n      });\n      this.elms.editor.addCursorPosListener(function (offset) {\n        var styles = Object.keys(_this2.document.getStylesAtOffset(offset));\n        console.log(_this2.document.getStylesAtOffset(offset));\n\n        _this2.elms.wrapper.querySelectorAll('#buttons > a').forEach(function (el) {\n          return el.classList.remove('active');\n        });\n\n        styles.forEach(function (style) {\n          _this2.elms.buttons[style].classList.add('active');\n\n          _this2.document.styles[style].active = true;\n        });\n      });\n      this.elms.buttons = {\n        wrapper: this.elms.wrapper.querySelector('#buttons'),\n        bold: this.elms.wrapper.querySelector('#buttons #bold'),\n        italic: this.elms.wrapper.querySelector('#buttons #italic'),\n        strike: this.elms.wrapper.querySelector('#buttons #strike')\n      };\n      this.elms.buttons.bold.addEventListener('click', function (e) {\n        _this2.elms.editor.focus();\n\n        _this2.document.styles.bold.active = !_this2.document.styles.bold.active;\n\n        _this2.elms.buttons.bold.classList.toggle('active');\n\n        var range = _this2.elms.editor.getSelection();\n\n        if (!range.collapsed) {\n          console.log('bold', range.startOffset, range.endOffset);\n          _this2.elms.editor.cursorPos = range.endOffset;\n\n          _this2.document.mark('bold', range.startOffset, range.endOffset);\n        }\n      });\n    }\n  }, {\n    key: \"logger\",\n    value: function logger(historyEvent) {\n      console.log('\\n%cFired event %s\\n%c%s\\n%s\\n%c%s\\n%s%o\\n%s%o\\n', ['font-weight: bold', 'margin-bottom: 6px'].join(';'), historyEvent.type.toUpperCase(), ['color: rgba(0,0,0,1)', 'padding-bottom: 6px'].join(';'), this.document.text, this.document.toHtml(), ['color: rgba(0,0,0,.9)', 'line-height: 1.4em'].join(';'), \"Document length: \".concat(this.document.text.length, \"; Cursor position: \").concat(this.elms.editor.cursorPos), 'Event details:', historyEvent, 'Bold ranges:', this.document.styles.bold.ranges);\n    }\n  }, {\n    key: \"onTextUpdate\",\n    value: function onTextUpdate(event) {\n      if (this.document.text.length) {\n        this.elms.placeholder.classList.add('invisible');\n      } else {\n        this.elms.placeholder.classList.remove('invisible');\n      }\n\n      this.elms.editor.innerHTML = this.document.toHtml();\n      this.elms.editor.setCursorPos(this.elms.editor.cursorPos);\n    }\n  }, {\n    key: \"initEditor\",\n    value: function initEditor() {\n      var _this3 = this;\n\n      if (this.document.text.length) {\n        this.elms.placeholder.classList.add('invisible');\n      } else {\n        this.elms.placeholder.classList.remove('invisible');\n      }\n\n      this.elms.editor.innerHTML = this.document.toHtml();\n      var ignore = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'];\n      this.elms.editor.addEventListener('keypress', function (e) {\n        e.preventDefault();\n        if (e.key.length !== 1) return;\n\n        var range = _this3.elms.editor.getSelection();\n\n        if (range.collapsed) {\n          _this3.elms.editor.cursorPos += 1;\n\n          var cP = _this3.elms.editor.getCursorPos();\n\n          _this3.document.insert(cP, e.key);\n        } else {\n          _this3.elms.editor.cursorPos = range.startOffset + e.key.length;\n\n          _this3.document.replace(range.startOffset, range.endOffset, e.key);\n        }\n      });\n      this.elms.editor.addEventListener('keydown', function (e) {\n        if (e.key.length === 1) return;\n\n        if (ignore.indexOf(e.key) >= 0) {\n          setTimeout(function () {\n            _this3.elms.editor.cursorPos = _this3.elms.editor.getCursorPos();\n          }, 1);\n          return;\n        }\n\n        e.preventDefault();\n        var node = window.getSelection().getRangeAt(0).endContainer;\n        if (node.nodeName == '#text') node = node.parentElement;\n\n        var cP = _this3.elms.editor.getCursorPos();\n\n        var range = _this3.elms.editor.getSelection();\n\n        switch (e.key) {\n          case 'Enter':\n            if (range.collapsed) {\n              _this3.elms.editor.cursorPos += 1;\n\n              _this3.document.insert(cP, '\\n');\n            } else {\n              _this3.elms.editor.cursorPos += 1;\n\n              _this3.document.replace(range.startOffset, range.endOffset, '\\n');\n            }\n\n            break;\n\n          case 'Backspace':\n            if (cP < 1) break;\n\n            if (range.collapsed) {\n              _this3.elms.editor.cursorPos -= 1;\n\n              _this3.document[\"delete\"](cP - 1, 1);\n            } else {\n              _this3.elms.editor.cursorPos = range.startOffset;\n\n              _this3.document.replace(range.startOffset, range.endOffset, '');\n            }\n\n            break;\n\n          case 'Delete':\n            if (range.collapsed) {\n              _this3.document[\"delete\"](cP, 1, 'forward');\n            } else {\n              _this3.elms.editor.cursorPos = range.startOffset;\n\n              _this3.document.replace(range.startOffset, range.endOffset, '');\n            }\n\n        }\n      });\n      this.elms.editor.addEventListener('mouseup', function (e) {\n        var range = window.getSelection().getRangeAt(0);\n\n        if (range.startContainer.parentElement.classList.contains('empty')) {\n          _this3.elms.editor.setCursorPos(0, range.startContainer);\n        }\n\n        _this3.elms.editor.cursorPos = _this3.elms.editor.getCursorPos();\n      });\n    }\n  }]);\n\n  return BakaEditor;\n}(\n/*#__PURE__*/\n_wrapNativeSuper(HTMLElement));\n\ncustomElements.define('baka-editor', BakaEditor);\n\n//# sourceURL=webpack:///./src/index.js?");
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _document__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./document */ "./src/document.js");
+/* harmony import */ var _editable__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./editable */ "./src/editable.js");
+/* harmony import */ var _editable__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_editable__WEBPACK_IMPORTED_MODULE_1__);
+function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+function _createSuper(Derived) {
+  function isNativeReflectConstruct() {
+    if (typeof Reflect === "undefined" || !Reflect.construct) return false;
+    if (Reflect.construct.sham) return false;
+    if (typeof Proxy === "function") return true;
+
+    try {
+      Date.prototype.toString.call(Reflect.construct(Date, [], function () {}));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  return function () {
+    var Super = _getPrototypeOf(Derived),
+        result;
+
+    if (isNativeReflectConstruct()) {
+      var NewTarget = _getPrototypeOf(this).constructor;
+
+      result = Reflect.construct(Super, arguments, NewTarget);
+    } else {
+      result = Super.apply(this, arguments);
+    }
+
+    return _possibleConstructorReturn(this, result);
+  };
+}
+
+function _possibleConstructorReturn(self, call) { if (call && (_typeof(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
+
+function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
+
+function _wrapNativeSuper(Class) { var _cache = typeof Map === "function" ? new Map() : undefined; _wrapNativeSuper = function _wrapNativeSuper(Class) { if (Class === null || !_isNativeFunction(Class)) return Class; if (typeof Class !== "function") { throw new TypeError("Super expression must either be null or a function"); } if (typeof _cache !== "undefined") { if (_cache.has(Class)) return _cache.get(Class); _cache.set(Class, Wrapper); } function Wrapper() { return _construct(Class, arguments, _getPrototypeOf(this).constructor); } Wrapper.prototype = Object.create(Class.prototype, { constructor: { value: Wrapper, enumerable: false, writable: true, configurable: true } }); return _setPrototypeOf(Wrapper, Class); }; return _wrapNativeSuper(Class); }
+
+function isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Date.prototype.toString.call(Reflect.construct(Date, [], function () {})); return true; } catch (e) { return false; } }
+
+function _construct(Parent, args, Class) { if (isNativeReflectConstruct()) { _construct = Reflect.construct; } else { _construct = function _construct(Parent, args, Class) { var a = [null]; a.push.apply(a, args); var Constructor = Function.bind.apply(Parent, a); var instance = new Constructor(); if (Class) _setPrototypeOf(instance, Class.prototype); return instance; }; } return _construct.apply(null, arguments); }
+
+function _isNativeFunction(fn) { return Function.toString.call(fn).indexOf("[native code]") !== -1; }
+
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+
+
+
+var BakaEditor =
+/*#__PURE__*/
+function (_HTMLElement) {
+  _inherits(BakaEditor, _HTMLElement);
+
+  var _super = _createSuper(BakaEditor);
+
+  function BakaEditor() {
+    var _this;
+
+    _classCallCheck(this, BakaEditor);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty(_assertThisInitialized(_this), "template", "<div id=\"wrapper\">\n        <div id=\"buttons\">\n            <a href=\"#\" id=\"bold\" class=\"\">B</a>\n            <a href=\"#\" id=\"italic\" class=\"\">I</a>\n            <a href=\"#\" id=\"strike\" class=\"\">S</a>\n        </div>\n        <div id=\"placeholder\">Type something!</div>\n        <baka-editable id=\"editor\" />\n    </div>");
+
+    _defineProperty(_assertThisInitialized(_this), "elms", {});
+
+    return _this;
+  }
+
+  _createClass(BakaEditor, [{
+    key: "connectedCallback",
+    value: function connectedCallback() {
+      this.innerHTML = this.template;
+      this.elms.wrapper = this.querySelector('#wrapper');
+      this.elms.editor = this.querySelector('#editor');
+      this.elms.placeholder = this.querySelector('#placeholder');
+      this.buttonsState = {};
+      this.document = new _document__WEBPACK_IMPORTED_MODULE_0__["default"]();
+      this.document.addEventListener('update', this.onTextUpdate.bind(this));
+      this.document.addEventListener('update', this.logger.bind(this));
+      this.initEditor();
+      this.initButtons();
+      this.elms.editor.addCursorPosListener(function (offset) {
+        console.log('Cursor position:', offset);
+      });
+    }
+  }, {
+    key: "updateButtons",
+    value: function updateButtons() {
+      var _this2 = this;
+
+      var range = this.elms.editor.getSelection();
+      var offset = range.startOffset; // console.log(
+      //     'Styles at range:',
+      //     this.document.getStylesAtRange(range.startOffset, range.endOffset)
+      // )
+
+      var styles = range.collapsed ? Object.keys(this.document.getStylesAtOffset(offset)) : this.document.getStylesAtRange(range.startOffset, range.endOffset);
+      console.log(this.document.getStylesAtOffset(offset));
+      this.elms.wrapper.querySelectorAll('#buttons > a').forEach(function (el) {
+        return el.classList.remove('active');
+      });
+      styles.forEach(function (style) {
+        _this2.elms.buttons[style].classList.add('active');
+      });
+    }
+  }, {
+    key: "initButtons",
+    value: function initButtons() {
+      var _this3 = this;
+
+      this.elms.editor.addCursorPosListener(function () {
+        return _this3.updateButtons();
+      });
+      this.buttonsState = {
+        bold: false,
+        italic: false,
+        strike: false
+      };
+      this.elms.buttons = {
+        wrapper: this.elms.wrapper.querySelector('#buttons'),
+        bold: this.elms.wrapper.querySelector('#buttons #bold'),
+        italic: this.elms.wrapper.querySelector('#buttons #italic'),
+        strike: this.elms.wrapper.querySelector('#buttons #strike')
+      };
+
+      var onButtonClick = function onButtonClick(buttonName, e) {
+        e.preventDefault();
+
+        _this3.elms.editor.focus();
+
+        var range = _this3.elms.editor.getSelection();
+
+        if (!range.collapsed) {
+          var styles = _this3.document.getStylesAtRange(range.startOffset, range.endOffset);
+
+          if (styles.indexOf(buttonName) >= 0) {
+            _this3.document.unmark(buttonName, range.startOffset, range.endOffset);
+          } else {
+            _this3.document.mark(buttonName, range.startOffset, range.endOffset);
+          }
+
+          _this3.elms.editor.cursorPos = range.endOffset;
+
+          _this3.elms.editor.setCursorPos(range.endOffset);
+
+          console.log(styles, range);
+        }
+
+        _this3.elms.buttons[buttonName].classList.toggle('active');
+      };
+
+      var _loop = function _loop(styleName) {
+        _this3.elms.buttons[styleName].addEventListener('click', function (e) {
+          return onButtonClick(styleName, e);
+        });
+      };
+
+      for (var styleName in this.document.styles) {
+        _loop(styleName);
+      }
+
+      window.document.addEventListener('click', function () {
+        return _this3.updateButtons();
+      });
+    }
+  }, {
+    key: "logger",
+    value: function logger(historyEvent) {
+      console.log('\n%cFired event %s\n%c%s\n%s\n%c%s\n%s%o\n%s%o\n', ['font-weight: bold', 'margin-bottom: 6px'].join(';'), historyEvent.type.toUpperCase(), ['color: rgba(0,0,0,1)', 'padding-bottom: 6px'].join(';'), this.document.text, this.document.toHtml(), ['color: rgba(0,0,0,.9)', 'line-height: 1.4em'].join(';'), "Document length: ".concat(this.document.text.length, "; Cursor position: ").concat(this.elms.editor.cursorPos), 'Event details:', historyEvent, 'Bold ranges:', this.document.styles.bold.ranges);
+    }
+  }, {
+    key: "onTextUpdate",
+    value: function onTextUpdate(event) {
+      if (this.document.text.length) {
+        this.elms.placeholder.classList.add('invisible');
+      } else {
+        this.elms.placeholder.classList.remove('invisible');
+      }
+
+      this.elms.editor.innerHTML = this.document.toHtml();
+      this.elms.editor.setCursorPos(this.elms.editor.cursorPos);
+    }
+  }, {
+    key: "initEditor",
+    value: function initEditor() {
+      var _this4 = this;
+
+      if (this.document.text.length) {
+        this.elms.placeholder.classList.add('invisible');
+      } else {
+        this.elms.placeholder.classList.remove('invisible');
+      }
+
+      this.elms.editor.innerHTML = this.document.toHtml();
+      var ignore = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'];
+      this.elms.editor.addEventListener('keypress', function (e) {
+        e.preventDefault();
+        if (e.key.length !== 1) return;
+
+        var range = _this4.elms.editor.getSelection();
+
+        if (range.collapsed) {
+          _this4.elms.editor.cursorPos += 1;
+
+          var cP = _this4.elms.editor.getCursorPos();
+
+          _this4.document.insert(cP, e.key);
+        } else {
+          _this4.elms.editor.cursorPos = range.startOffset + e.key.length;
+
+          _this4.document.replace(range.startOffset, range.endOffset, e.key);
+        }
+      });
+      this.elms.editor.addEventListener('keydown', function (e) {
+        if (e.key.length === 1) return;
+
+        if (ignore.indexOf(e.key) >= 0) {
+          setTimeout(function () {
+            _this4.elms.editor.cursorPos = _this4.elms.editor.getCursorPos();
+          }, 1);
+          return;
+        }
+
+        e.preventDefault();
+        var node = window.getSelection().getRangeAt(0).endContainer;
+        if (node.nodeName == '#text') node = node.parentElement;
+
+        var cP = _this4.elms.editor.getCursorPos();
+
+        var range = _this4.elms.editor.getSelection();
+
+        switch (e.key) {
+          case 'Enter':
+            if (range.collapsed) {
+              _this4.elms.editor.cursorPos += 1;
+
+              _this4.document.insert(cP, '\n');
+            } else {
+              _this4.elms.editor.cursorPos += 1;
+
+              _this4.document.replace(range.startOffset, range.endOffset, '\n');
+            }
+
+            break;
+
+          case 'Backspace':
+            if (cP < 1) break;
+
+            if (range.collapsed) {
+              _this4.elms.editor.cursorPos -= 1;
+
+              _this4.document["delete"](cP - 1, 1);
+            } else {
+              _this4.elms.editor.cursorPos = range.startOffset;
+
+              _this4.document.replace(range.startOffset, range.endOffset, '');
+            }
+
+            break;
+
+          case 'Delete':
+            if (range.collapsed) {
+              _this4.document["delete"](cP, 1, 'forward');
+            } else {
+              _this4.elms.editor.cursorPos = range.startOffset;
+
+              _this4.document.replace(range.startOffset, range.endOffset, '');
+            }
+
+        }
+      });
+      this.elms.editor.addEventListener('mouseup', function (e) {
+        var range = window.getSelection().getRangeAt(0);
+
+        if (range.startContainer.parentElement.classList.contains('empty')) {
+          _this4.elms.editor.setCursorPos(0, range.startContainer);
+        }
+
+        _this4.elms.editor.cursorPos = _this4.elms.editor.getCursorPos();
+      });
+    }
+  }]);
+
+  return BakaEditor;
+}(
+/*#__PURE__*/
+_wrapNativeSuper(HTMLElement));
+
+customElements.define('baka-editor', BakaEditor);
 
 /***/ })
 
 /******/ });
+//# sourceMappingURL=bundle.js.map

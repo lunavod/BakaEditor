@@ -23,11 +23,32 @@ export default class Document {
 
     getStylesAtOffset(offset) {
         let styles = {}
-        for (let styleName of Object.keys(this.styles)) {
+        for (let styleName in this.styles) {
             for (let i = 0; i < this.styles[styleName].ranges.length; i++) {
                 let range = this.styles[styleName].ranges[i]
                 if (!(range[0] < offset && range[1] >= offset)) continue
                 styles[styleName] = range
+            }
+        }
+        return styles
+    }
+
+    getStylesAtRange(start, end) {
+        let styles = []
+        for (let styleName in this.styles) {
+            for (let i = 0; i < this.styles[styleName].ranges.length; i++) {
+                let range = this.styles[styleName].ranges[i]
+                if (
+                    !(
+                        (
+                            (range[0] >= start && range[0] < end) || // Начало в выделении
+                            (range[1] > start && range[1] <= end) || // Конец в выделении
+                            (range[0] <= start && range[1] >= end)
+                        ) // Выделение между началом и концом
+                    )
+                )
+                    continue
+                styles.push(styleName)
             }
         }
         return styles
@@ -50,6 +71,55 @@ export default class Document {
             this.styles[styleName].ranges[i][1] = end
         }
 
+        this.fireUpdate({ type: 'mark' })
+    }
+
+    unmark(styleName, start, end) {
+        console.log('UNMARK', styleName, start, end)
+        let activeRanges = []
+
+        for (let i = 0; i < this.styles[styleName].ranges.length; i++) {
+            let range = this.styles[styleName].ranges[i]
+            console.log('RAAAAANGE', range)
+            if (
+                !(
+                    (
+                        (range[0] >= start && range[0] <= end) || // Начало в выделении
+                        (range[1] >= start && range[1] <= end) || // Конец в выделении
+                        (range[0] <= start && range[1] >= end)
+                    ) // Выделение между началом и концом
+                )
+            )
+                continue
+            activeRanges.push(i)
+            break
+        }
+
+        console.log(
+            'Active ranges:',
+            activeRanges,
+            this.styles[styleName].ranges
+        )
+
+        for (let i of activeRanges) {
+            let range = this.styles[styleName].ranges[i]
+            if (range[0] >= start && range[0] <= end && range[1] > end) {
+                console.log('1')
+                // Начало в выделении, конец нет
+                this.styles[styleName].ranges[i][0] = end
+            }
+
+            if (range[1] >= start && range[1] <= end && range[0] < start) {
+                console.log('2')
+                // Конец в выделении, начало нет
+                this.styles[styleName].ranges[i][1] = start
+            }
+
+            if (range[0] >= start && range[1] <= end) {
+                console.log('3')
+                this.styles[styleName].ranges.splice(i, 1)
+            }
+        }
         this.fireUpdate({ type: 'mark' })
     }
 
@@ -91,21 +161,18 @@ export default class Document {
                 let range = ranges[i]
 
                 if (range[0] > start + n) {
-                    console.log('1')
                     // Если после конца выделения - сдвинуть назад
                     this.styles[styleName].ranges[i][0] -= n
                     this.styles[styleName].ranges[i][1] -= n
                 }
 
                 if (range[0] >= start && range[1] <= start + n) {
-                    console.log('2')
                     // Если полностью внутри выделения - удалить
                     remove.push(i)
                     continue
                 }
 
                 if (range[0] > start && range[1] > start + n) {
-                    console.log('3')
                     // Если начало внутри выделения, а конец снаружи
                     this.styles[styleName].ranges[i][0] = start
                     this.styles[styleName].ranges[i][1] = range[1] - n
@@ -116,13 +183,11 @@ export default class Document {
                     range[1] > start &&
                     range[1] < start + n
                 ) {
-                    console.log('4')
                     // Если начало до выделения, а конец внутри
                     this.styles[styleName].ranges[i][1] = start
                 }
 
                 if (range[0] < start && range[1] >= start + n) {
-                    console.log('5')
                     // Если выделение полностью внутри
                     this.styles[styleName].ranges[i][1] = range[1] - n
                 }
@@ -130,7 +195,6 @@ export default class Document {
                 if (
                     this.text[this.styles[styleName].ranges[i][1] - 1] === '\n'
                 ) {
-                    console.log('6')
                     this.styles[styleName].ranges[i][1] -= 1
                 }
             }
