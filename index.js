@@ -5,6 +5,7 @@ class BakaEditor extends HTMLElement {
         <div id="buttons">
             <a href="#" id="bold" class="">B</a>
             <a href="#" id="italic" class="">I</a>
+            <a href="#" id="strike" class="">S</a>
         </div>
         <div id="placeholder">Type something!</div>
         <div id="editor" contenteditable></div >
@@ -19,6 +20,7 @@ class BakaEditor extends HTMLElement {
         },
         offset => {
             const styles = Object.keys(this.document.getStylesAtOffset(offset))
+            console.log(this.document.getStylesAtOffset(offset))
             this.elms.wrapper
                 .querySelectorAll('#buttons > a')
                 .forEach(el => el.classList.remove('active'))
@@ -51,7 +53,9 @@ class BakaEditor extends HTMLElement {
     initButtons() {
         this.elms.buttons = {
             wrapper: this.elms.wrapper.querySelector('#buttons'),
-            bold: this.elms.wrapper.querySelector('#buttons #bold')
+            bold: this.elms.wrapper.querySelector('#buttons #bold'),
+            italic: this.elms.wrapper.querySelector('#buttons #italic'),
+            strike: this.elms.wrapper.querySelector('#buttons #strike')
         }
 
         this.elms.buttons.bold.addEventListener('click', e => {
@@ -200,23 +204,55 @@ class BakaEditor extends HTMLElement {
         })
     }
 
-    getContainerAtOffset(offset) {
-        let lines = this.elms.editor.parentElement.querySelectorAll(
-            '#editor > div'
-        )
-        let n = 0
-        for (let line of lines) {
-            let nodes = line.childNodes
-            for (let node of nodes) {
-                let content = node
-                if (content.firstChild) content = content.firstChild
-
-                if (n + content.length >= offset) return { line: node, n }
-                n += content.length
-            }
-            n += 1
+    getContainerOffset(container) {
+        let nodes = Array.from(this.elms.editor.childNodes)
+        while (nodes.filter(node => node.childNodes.length).length) {
+            nodes = nodes
+                .map(el =>
+                    el.nodeName === '#text' || el.nodeName === 'BR'
+                        ? [el]
+                        : Array.from(el.childNodes)
+                )
+                .flat(Infinity)
         }
-        return { line: lines[lines.length - 1], n: n - 1 }
+
+        let offset = 0
+        for (let node of nodes) {
+            if (node === container) break
+            console.log(node)
+            offset += node.length || 1
+        }
+
+        console.log('GET CONTAINER AT OFFSET:', container, offset)
+        return offset
+    }
+
+    getContainerAtOffset(offset) {
+        let nodes = Array.from(this.elms.editor.childNodes)
+        while (nodes.filter(node => node.childNodes.length).length) {
+            nodes = nodes
+                .map(el =>
+                    el.nodeName === '#text' || el.nodeName === 'BR'
+                        ? [el]
+                        : Array.from(el.childNodes)
+                )
+                .flat(Infinity)
+        }
+
+        console.log(nodes)
+        let lastNode
+        let x = 0
+        for (let node of nodes) {
+            if (node.nodeName !== '#text' && node.nodeName !== 'BR') {
+                if (!node.firstChild) continue
+                node = node.firstChild
+            }
+            lastNode = node
+            if (x + (node.length || 1) >= offset) break
+            x += node.length || 1
+            console.log('X:', x, 'Offset:', offset, 'Node:', node)
+        }
+        return { line: lastNode || nodes[0], n: x }
     }
 
     setCursorPos(offset) {
@@ -241,28 +277,17 @@ class BakaEditor extends HTMLElement {
         preCaretRange.setEnd(range.endContainer, range.endOffset)
         caretOffset = preCaretRange.toString().length - selected
 
+        const brCount = Array.from(preCaretRange.cloneContents().childNodes)
+            .map(el =>
+                el.nodeName === '#text'
+                    ? []
+                    : Array.from(el.querySelectorAll('*'))
+            )
+            .flat(Infinity)
+            .filter(el => el.nodeName === 'BR').length
+        caretOffset += brCount
+
         return caretOffset
-    }
-
-    getContainerOffset(container) {
-        let lines = this.elms.editor.parentElement.querySelectorAll(
-            '#editor > div'
-        )
-        let offset = 0
-        for (let line of lines) {
-            let elements = line.childNodes
-            for (let element of elements) {
-                let content = element
-                if (content.firstChild) content = content.firstChild
-
-                if (content === container) {
-                    return offset
-                }
-                offset += content.length
-            }
-            offset += 1
-        }
-        return offset
     }
 
     getSelection() {
@@ -270,6 +295,8 @@ class BakaEditor extends HTMLElement {
         let result = {}
         let firstOffset = this.getContainerOffset(range.startContainer)
         let secondOffset = this.getContainerOffset(range.endContainer)
+
+        console.log('Offsets:', firstOffset, secondOffset)
 
         result.collapsed = range.collapsed
 

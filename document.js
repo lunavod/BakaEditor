@@ -1,7 +1,5 @@
 class Document {
-    // text = 'aabb\nbbaa'
     text = 'aabb\nbbaa'
-    // text = ''
     history = []
 
     styles = {
@@ -15,6 +13,11 @@ class Document {
             openTag: '<i>',
             closeTag: '</i>',
             ranges: [[6, 8]]
+        },
+        strike: {
+            openTag: '<s>',
+            closeTag: '</s>',
+            ranges: [[1, 4]]
         }
     }
 
@@ -23,8 +26,8 @@ class Document {
         for (let styleName of Object.keys(this.styles)) {
             for (let i = 0; i < this.styles[styleName].ranges.length; i++) {
                 let range = this.styles[styleName].ranges[i]
-                if (!(range[0] <= offset - 1 && range[1] >= offset)) continue
-                styles[styleName] = i
+                if (!(range[0] < offset && range[1] >= offset)) continue
+                styles[styleName] = range
             }
         }
         return styles
@@ -123,8 +126,6 @@ class Document {
                     // Если выделение полностью внутри
                     this.styles[styleName].ranges[i][1] = range[1] - n
                 }
-
-                console.log(this.text[this.styles[styleName].ranges[i][1]])
 
                 if (
                     this.text[this.styles[styleName].ranges[i][1] - 1] === '\n'

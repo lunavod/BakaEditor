@@ -60,6 +60,10 @@ body {
     font-style: italic;
 }
 
+#buttons #strike {
+    text-decoration: line-through;
+}
+
 #placeholder {
     position: absolute;
     width: 100%;
