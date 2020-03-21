@@ -1,4 +1,4 @@
-class Document {
+export default class Document {
     text = 'aabb\nbbaa'
     history = []
 
