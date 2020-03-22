@@ -8,18 +8,32 @@ class BakaEditor extends HTMLElement {
             <a href="#" id="italic" class="">I</a>
             <a href="#" id="strike" class="">S</a>
         </div>
-        <div id="placeholder">Type something!</div>
+        <div id="placeholder">Type: Echo!</div>
         <baka-editable id="editor" />
     </div>`
 
     elms = {}
     stylesOverride = {}
 
+    static get observedAttributes() {
+        return ['placeholder']
+    }
+
+    attributeChangedCallback(name, oldValue, newValue) {
+        switch (name) {
+            case 'placeholder':
+                this.elms.placeholder.innerHTML = newValue
+                break
+        }
+    }
+
     connectedCallback() {
         this.innerHTML = this.template
         this.elms.wrapper = this.querySelector('#wrapper')
         this.elms.editor = this.querySelector('#editor')
         this.elms.placeholder = this.querySelector('#placeholder')
+        if (this.getAttribute('placeholder'))
+            this.elms.placeholder.innerHTML = this.getAttribute('placeholder')
         this.document = new Document()
         this.document.addEventListener('update', this.onTextUpdate.bind(this))
         this.document.addEventListener('update', this.logger.bind(this))

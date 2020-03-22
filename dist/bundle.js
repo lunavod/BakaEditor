@@ -866,7 +866,7 @@ function (_HTMLElement) {
 
     _this = _super.call.apply(_super, [this].concat(args));
 
-    _defineProperty(_assertThisInitialized(_this), "template", "<div id=\"wrapper\">\n        <div id=\"buttons\">\n            <a href=\"#\" id=\"bold\" class=\"\">B</a>\n            <a href=\"#\" id=\"italic\" class=\"\">I</a>\n            <a href=\"#\" id=\"strike\" class=\"\">S</a>\n        </div>\n        <div id=\"placeholder\">Type something!</div>\n        <baka-editable id=\"editor\" />\n    </div>");
+    _defineProperty(_assertThisInitialized(_this), "template", "<div id=\"wrapper\">\n        <div id=\"buttons\">\n            <a href=\"#\" id=\"bold\" class=\"\">B</a>\n            <a href=\"#\" id=\"italic\" class=\"\">I</a>\n            <a href=\"#\" id=\"strike\" class=\"\">S</a>\n        </div>\n        <div id=\"placeholder\">Type: Echo!</div>\n        <baka-editable id=\"editor\" />\n    </div>");
 
     _defineProperty(_assertThisInitialized(_this), "elms", {});
 
@@ -876,12 +876,22 @@ function (_HTMLElement) {
   }
 
   _createClass(BakaEditor, [{
+    key: "attributeChangedCallback",
+    value: function attributeChangedCallback(name, oldValue, newValue) {
+      switch (name) {
+        case 'placeholder':
+          this.elms.placeholder.innerHTML = newValue;
+          break;
+      }
+    }
+  }, {
     key: "connectedCallback",
     value: function connectedCallback() {
       this.innerHTML = this.template;
       this.elms.wrapper = this.querySelector('#wrapper');
       this.elms.editor = this.querySelector('#editor');
       this.elms.placeholder = this.querySelector('#placeholder');
+      if (this.getAttribute('placeholder')) this.elms.placeholder.innerHTML = this.getAttribute('placeholder');
       this.document = new _document__WEBPACK_IMPORTED_MODULE_0__["default"]();
       this.document.addEventListener('update', this.onTextUpdate.bind(this));
       this.document.addEventListener('update', this.logger.bind(this));
@@ -1102,6 +1112,11 @@ function (_HTMLElement) {
 
         _this4.elms.editor.cursorPos = _this4.elms.editor.getCursorPos();
       });
+    }
+  }], [{
+    key: "observedAttributes",
+    get: function get() {
+      return ['placeholder'];
     }
   }]);
 
