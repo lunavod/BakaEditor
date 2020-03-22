@@ -197,12 +197,10 @@ function () {
   }, {
     key: "unmark",
     value: function unmark(styleName, start, end) {
-      console.log('UNMARK', styleName, start, end);
       var activeRanges = [];
 
       for (var i = 0; i < this.styles[styleName].ranges.length; i++) {
         var range = this.styles[styleName].ranges[i];
-        console.log('RAAAAANGE', range);
         if (!(range[0] >= start && range[0] <= end || // Начало в выделении
         range[1] >= start && range[1] <= end || // Конец в выделении
         range[0] <= start && range[1] >= end)) continue;
@@ -210,26 +208,21 @@ function () {
         break;
       }
 
-      console.log('Active ranges:', activeRanges, this.styles[styleName].ranges);
-
       for (var _i = 0, _activeRanges = activeRanges; _i < _activeRanges.length; _i++) {
         var _i2 = _activeRanges[_i];
         var _range = this.styles[styleName].ranges[_i2];
 
         if (_range[0] >= start && _range[0] <= end && _range[1] > end) {
-          console.log('1'); // Начало в выделении, конец нет
-
+          // Начало в выделении, конец нет
           this.styles[styleName].ranges[_i2][0] = end;
         }
 
         if (_range[1] >= start && _range[1] <= end && _range[0] < start) {
-          console.log('2'); // Конец в выделении, начало нет
-
+          // Конец в выделении, начало нет
           this.styles[styleName].ranges[_i2][1] = start;
         }
 
         if (_range[0] >= start && _range[1] <= end) {
-          console.log('3');
           this.styles[styleName].ranges.splice(_i2, 1);
         }
       }
@@ -448,6 +441,7 @@ function () {
       for (var _i5 = 0, _lines = lines; _i5 < _lines.length; _i5++) {
         var _nodes = _lines[_i5];
         var lineText = '';
+        var lineLength = 0;
         var _iteratorNormalCompletion2 = true;
         var _didIteratorError2 = false;
         var _iteratorError2 = undefined;
@@ -462,6 +456,7 @@ function () {
               return _this.styles[styleName].closeTag;
             }).join('');
             lineText += start + node.text + end;
+            if (node.text !== '\n') lineLength += node.text.length;
           }
         } catch (err) {
           _didIteratorError2 = true;
@@ -478,7 +473,7 @@ function () {
           }
         }
 
-        result += "<div".concat(lineText === '\n' ? ' class="empty"' : '', ">").concat(lineText === '\n' ? '&#8203;' : lineText, "</div>");
+        result += "<div".concat(lineText === '\n' ? ' class="empty"' : '', ">").concat(!lineLength ? '&#8203;' : lineText, "</div>");
       } // result = result.replace(/\n/gm, '<br/>')
       // if (result.endsWith('<br/>')) result += '&nbsp;'
 
@@ -648,7 +643,6 @@ function (_HTMLElement) {
         }).flat(Infinity);
       }
 
-      console.log(nodes);
       var lastNode;
       var x = 0;
       var _iteratorNormalCompletion2 = true;
@@ -700,9 +694,7 @@ function (_HTMLElement) {
       var node = containerData.line;
       var n = containerData.n;
       if (!node) return;
-      if (node.firstChild) node = node.firstChild; // if (node.nodeName === 'BR') n = offset
-
-      console.log(offset, containerData);
+      if (node.firstChild) node = node.firstChild;
       var range = window.getSelection().getRangeAt(0);
       range.setEnd(node, offset - n);
       range.setStart(node, offset - n);
@@ -723,7 +715,6 @@ function (_HTMLElement) {
         return el.nodeName === 'BR';
       }).length;
       caretOffset += brCount;
-      console.log('BR COUNT:', brCount);
       return caretOffset;
     }
   }, {
@@ -860,6 +851,8 @@ function (_HTMLElement) {
 
     _defineProperty(_assertThisInitialized(_this), "elms", {});
 
+    _defineProperty(_assertThisInitialized(_this), "stylesOverride", {});
+
     return _this;
   }
 
@@ -870,7 +863,6 @@ function (_HTMLElement) {
       this.elms.wrapper = this.querySelector('#wrapper');
       this.elms.editor = this.querySelector('#editor');
       this.elms.placeholder = this.querySelector('#placeholder');
-      this.buttonsState = {};
       this.document = new _document__WEBPACK_IMPORTED_MODULE_0__["default"]();
       this.document.addEventListener('update', this.onTextUpdate.bind(this));
       this.document.addEventListener('update', this.logger.bind(this));
@@ -889,13 +881,21 @@ function (_HTMLElement) {
       var _this2 = this;
 
       var range = this.elms.editor.getSelection();
-      var offset = range.startOffset; // console.log(
-      //     'Styles at range:',
-      //     this.document.getStylesAtRange(range.startOffset, range.endOffset)
-      // )
-
+      var offset = range.startOffset;
       var styles = range.collapsed ? Object.keys(this.document.getStylesAtOffset(offset)) : this.document.getStylesAtRange(range.startOffset, range.endOffset);
-      console.log(this.document.getStylesAtOffset(offset));
+      console.log('Styles before:', styles);
+
+      for (var styleName in this.stylesOverride) {
+        if (styles.indexOf(styleName) >= 0 && !this.stylesOverride[styleName]) {
+          styles.splice(styles.indexOf(styleName), 1);
+        }
+
+        if (styles.indexOf(styleName) < 0 && this.stylesOverride[styleName]) {
+          styles.push(styleName);
+        }
+      }
+
+      console.log('Styles after:', styles);
       this.elms.wrapper.querySelectorAll('#buttons > a').forEach(function (el) {
         return el.classList.remove('active');
       });
@@ -909,13 +909,10 @@ function (_HTMLElement) {
       var _this3 = this;
 
       this.elms.editor.addCursorPosListener(function () {
-        return _this3.updateButtons();
+        _this3.stylesOverride = {};
+
+        _this3.updateButtons();
       });
-      this.buttonsState = {
-        bold: false,
-        italic: false,
-        strike: false
-      };
       this.elms.buttons = {
         wrapper: this.elms.wrapper.querySelector('#buttons'),
         bold: this.elms.wrapper.querySelector('#buttons #bold'),
@@ -943,10 +940,12 @@ function (_HTMLElement) {
 
           _this3.elms.editor.setCursorPos(range.endOffset);
 
-          console.log(styles, range);
+          return;
         }
 
-        _this3.elms.buttons[buttonName].classList.toggle('active');
+        var button = _this3.elms.buttons[buttonName];
+        var isActive = button.classList.contains('active');
+        _this3.stylesOverride[buttonName] = !isActive; // this.elms.buttons[buttonName].classList.toggle('active')
       };
 
       var _loop = function _loop(styleName) {
@@ -959,8 +958,8 @@ function (_HTMLElement) {
         _loop(styleName);
       }
 
-      window.document.addEventListener('click', function () {
-        return _this3.updateButtons();
+      window.document.addEventListener('click', function (e) {
+        _this3.updateButtons();
       });
     }
   }, {
@@ -1004,14 +1003,23 @@ function (_HTMLElement) {
 
           var cP = _this4.elms.editor.getCursorPos();
 
-          console.log('Insert pos:', cP);
-
           _this4.document.insert(cP, e.key);
         } else {
           _this4.elms.editor.cursorPos = range.startOffset + e.key.length;
 
           _this4.document.replace(range.startOffset, range.endOffset, e.key);
         }
+
+        var styles = _this4.document.getStylesAtOffset(range.startOffset);
+
+        console.log('STYLES', styles);
+
+        for (var styleName in _this4.stylesOverride) {
+          if (_this4.stylesOverride[styleName] && !(styleName in styles)) _this4.document.mark(styleName, range.startOffset, range.startOffset + e.key.length);
+          if (!_this4.stylesOverride[styleName] && styleName in styles) _this4.document.unmark(styleName, range.startOffset, range.startOffset + e.key.length);
+        }
+
+        _this4.stylesOverride = {};
       });
       this.elms.editor.addEventListener('keydown', function (e) {
         if (e.key.length === 1) return;

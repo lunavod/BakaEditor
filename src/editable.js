@@ -50,7 +50,6 @@ class Editable extends HTMLElement {
                 .flat(Infinity)
         }
 
-        console.log(nodes)
         let lastNode
         let x = 0
         for (let node of nodes) {
@@ -77,9 +76,6 @@ class Editable extends HTMLElement {
         if (!node) return
 
         if (node.firstChild) node = node.firstChild
-        // if (node.nodeName === 'BR') n = offset
-
-        console.log(offset, containerData)
 
         var range = window.getSelection().getRangeAt(0)
         range.setEnd(node, offset - n)
@@ -105,8 +101,6 @@ class Editable extends HTMLElement {
             .flat(Infinity)
             .filter(el => el.nodeName === 'BR').length
         caretOffset += brCount
-
-        console.log('BR COUNT:', brCount)
 
         return caretOffset
     }

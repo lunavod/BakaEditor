@@ -13,13 +13,13 @@ class BakaEditor extends HTMLElement {
     </div>`
 
     elms = {}
+    stylesOverride = {}
 
     connectedCallback() {
         this.innerHTML = this.template
         this.elms.wrapper = this.querySelector('#wrapper')
         this.elms.editor = this.querySelector('#editor')
         this.elms.placeholder = this.querySelector('#placeholder')
-        this.buttonsState = {}
         this.document = new Document()
         this.document.addEventListener('update', this.onTextUpdate.bind(this))
         this.document.addEventListener('update', this.logger.bind(this))
@@ -34,15 +34,26 @@ class BakaEditor extends HTMLElement {
     updateButtons() {
         let range = this.elms.editor.getSelection()
         let offset = range.startOffset
-
-        // console.log(
-        //     'Styles at range:',
-        //     this.document.getStylesAtRange(range.startOffset, range.endOffset)
-        // )
         const styles = range.collapsed
             ? Object.keys(this.document.getStylesAtOffset(offset))
             : this.document.getStylesAtRange(range.startOffset, range.endOffset)
-        console.log(this.document.getStylesAtOffset(offset))
+        console.log('Styles before:', styles)
+        for (let styleName in this.stylesOverride) {
+            if (
+                styles.indexOf(styleName) >= 0 &&
+                !this.stylesOverride[styleName]
+            ) {
+                styles.splice(styles.indexOf(styleName), 1)
+            }
+            if (
+                styles.indexOf(styleName) < 0 &&
+                this.stylesOverride[styleName]
+            ) {
+                styles.push(styleName)
+            }
+        }
+        console.log('Styles after:', styles)
+
         this.elms.wrapper
             .querySelectorAll('#buttons > a')
             .forEach(el => el.classList.remove('active'))
@@ -52,12 +63,10 @@ class BakaEditor extends HTMLElement {
     }
 
     initButtons() {
-        this.elms.editor.addCursorPosListener(() => this.updateButtons())
-        this.buttonsState = {
-            bold: false,
-            italic: false,
-            strike: false
-        }
+        this.elms.editor.addCursorPosListener(() => {
+            this.stylesOverride = {}
+            this.updateButtons()
+        })
         this.elms.buttons = {
             wrapper: this.elms.wrapper.querySelector('#buttons'),
             bold: this.elms.wrapper.querySelector('#buttons #bold'),
@@ -90,10 +99,15 @@ class BakaEditor extends HTMLElement {
                 }
                 this.elms.editor.cursorPos = range.endOffset
                 this.elms.editor.setCursorPos(range.endOffset)
-                console.log(styles, range)
+                return
             }
 
-            this.elms.buttons[buttonName].classList.toggle('active')
+            const button = this.elms.buttons[buttonName]
+            const isActive = button.classList.contains('active')
+
+            this.stylesOverride[buttonName] = !isActive
+
+            // this.elms.buttons[buttonName].classList.toggle('active')
         }
 
         for (let styleName in this.document.styles) {
@@ -101,7 +115,9 @@ class BakaEditor extends HTMLElement {
                 onButtonClick(styleName, e)
             )
         }
-        window.document.addEventListener('click', () => this.updateButtons())
+        window.document.addEventListener('click', e => {
+            this.updateButtons()
+        })
     }
 
     logger(historyEvent) {
@@ -164,12 +180,29 @@ class BakaEditor extends HTMLElement {
             if (range.collapsed) {
                 this.elms.editor.cursorPos += 1
                 let cP = this.elms.editor.getCursorPos()
-                console.log('Insert pos:', cP)
                 this.document.insert(cP, e.key)
             } else {
                 this.elms.editor.cursorPos = range.startOffset + e.key.length
                 this.document.replace(range.startOffset, range.endOffset, e.key)
             }
+
+            let styles = this.document.getStylesAtOffset(range.startOffset)
+            console.log('STYLES', styles)
+            for (let styleName in this.stylesOverride) {
+                if (this.stylesOverride[styleName] && !(styleName in styles))
+                    this.document.mark(
+                        styleName,
+                        range.startOffset,
+                        range.startOffset + e.key.length
+                    )
+                if (!this.stylesOverride[styleName] && styleName in styles)
+                    this.document.unmark(
+                        styleName,
+                        range.startOffset,
+                        range.startOffset + e.key.length
+                    )
+            }
+            this.stylesOverride = {}
         })
 
         this.elms.editor.addEventListener('keydown', e => {

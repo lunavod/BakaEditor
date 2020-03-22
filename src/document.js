@@ -79,12 +79,10 @@ export default class Document {
     }
 
     unmark(styleName, start, end) {
-        console.log('UNMARK', styleName, start, end)
         let activeRanges = []
 
         for (let i = 0; i < this.styles[styleName].ranges.length; i++) {
             let range = this.styles[styleName].ranges[i]
-            console.log('RAAAAANGE', range)
             if (
                 !(
                     (
@@ -99,28 +97,19 @@ export default class Document {
             break
         }
 
-        console.log(
-            'Active ranges:',
-            activeRanges,
-            this.styles[styleName].ranges
-        )
-
         for (let i of activeRanges) {
             let range = this.styles[styleName].ranges[i]
             if (range[0] >= start && range[0] <= end && range[1] > end) {
-                console.log('1')
                 // Начало в выделении, конец нет
                 this.styles[styleName].ranges[i][0] = end
             }
 
             if (range[1] >= start && range[1] <= end && range[0] < start) {
-                console.log('2')
                 // Конец в выделении, начало нет
                 this.styles[styleName].ranges[i][1] = start
             }
 
             if (range[0] >= start && range[1] <= end) {
-                console.log('3')
                 this.styles[styleName].ranges.splice(i, 1)
             }
         }
@@ -291,6 +280,7 @@ export default class Document {
 
         for (let nodes of lines) {
             let lineText = ''
+            let lineLength = 0
             for (let node of nodes) {
                 let start = node.styles
                     .map(styleName => this.styles[styleName].openTag)
@@ -299,9 +289,10 @@ export default class Document {
                     .map(styleName => this.styles[styleName].closeTag)
                     .join('')
                 lineText += start + node.text + end
+                if (node.text !== '\n') lineLength += node.text.length
             }
             result += `<div${lineText === '\n' ? ' class="empty"' : ''}>${
-                lineText === '\n' ? '&#8203;' : lineText
+                !lineLength ? '&#8203;' : lineText
             }</div>`
         }
 
