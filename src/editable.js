@@ -54,7 +54,11 @@ class Editable extends HTMLElement {
         let lastNode
         let x = 0
         for (let node of nodes) {
-            if (node.nodeName !== '#text' && node.nodeName !== 'BR') {
+            if (node.nodeName == 'BR') {
+                x += 1
+                continue
+            }
+            if (node.nodeName !== '#text') {
                 if (!node.firstChild) continue
                 node = node.firstChild
             }
@@ -70,8 +74,10 @@ class Editable extends HTMLElement {
         let node = containerData.line
         let n = containerData.n
 
+        if (!node) return
+
         if (node.firstChild) node = node.firstChild
-        if (node.nodeName === 'BR') n = offset
+        // if (node.nodeName === 'BR') n = offset
 
         console.log(offset, containerData)
 
@@ -99,6 +105,8 @@ class Editable extends HTMLElement {
             .flat(Infinity)
             .filter(el => el.nodeName === 'BR').length
         caretOffset += brCount
+
+        console.log('BR COUNT:', brCount)
 
         return caretOffset
     }

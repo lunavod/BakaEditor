@@ -110,7 +110,7 @@ function () {
   function Document() {
     _classCallCheck(this, Document);
 
-    _defineProperty(this, "text", 'aabb\nbbaa');
+    _defineProperty(this, "text", '');
 
     _defineProperty(this, "history", []);
 
@@ -119,17 +119,20 @@ function () {
         openTag: '<b>',
         closeTag: '</b>',
         active: false,
-        ranges: [[2, 7]]
+        // ranges: [[2, 7]]
+        ranges: []
       },
       italic: {
         openTag: '<i>',
         closeTag: '</i>',
-        ranges: [[6, 8]]
+        // ranges: [[6, 8]]
+        ranges: []
       },
       strike: {
         openTag: '<s>',
         closeTag: '</s>',
-        ranges: [[1, 4]]
+        // ranges: [[1, 4]]
+        ranges: []
       }
     });
 
@@ -356,8 +359,10 @@ function () {
     value: function toHtml() {
       var _this = this;
 
+      if (!this.text.length) return '';
       var allRanges = [];
       var nodes = [];
+      var lines = [[]];
       var result = '';
 
       for (var styleName in this.styles) {
@@ -411,18 +416,25 @@ function () {
         start: 0,
         end: 1
       };
+      var currentLine = 0;
 
       for (var i = 1; i < this.text.length; i++) {
         var ch = this.text[i];
         var styles = getStylesAtOffset(i);
 
-        if (stylesEqual(currentNode.styles, styles)) {
+        if (stylesEqual(currentNode.styles, styles) && ch !== '\n') {
           currentNode.end = i;
           currentNode.text += ch;
           continue;
         }
 
-        nodes.push(currentNode);
+        lines[currentLine].push(currentNode);
+
+        if (ch === '\n') {
+          currentLine++;
+          lines.push([]); // continue
+        }
+
         currentNode = {
           styles: styles,
           text: ch,
@@ -431,21 +443,47 @@ function () {
         };
       }
 
-      nodes.push(currentNode);
+      lines[currentLine].push(currentNode);
 
-      for (var _i5 = 0, _nodes = nodes; _i5 < _nodes.length; _i5++) {
-        var node = _nodes[_i5];
-        var start = node.styles.map(function (styleName) {
-          return _this.styles[styleName].openTag;
-        }).join('');
-        var end = node.styles.map(function (styleName) {
-          return _this.styles[styleName].closeTag;
-        }).join('');
-        result += start + node.text + end;
-      }
+      for (var _i5 = 0, _lines = lines; _i5 < _lines.length; _i5++) {
+        var _nodes = _lines[_i5];
+        var lineText = '';
+        var _iteratorNormalCompletion2 = true;
+        var _didIteratorError2 = false;
+        var _iteratorError2 = undefined;
 
-      result = result.replace(/\n/gm, '<br/>');
-      return result;
+        try {
+          for (var _iterator2 = _nodes[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+            var node = _step2.value;
+            var start = node.styles.map(function (styleName) {
+              return _this.styles[styleName].openTag;
+            }).join('');
+            var end = node.styles.map(function (styleName) {
+              return _this.styles[styleName].closeTag;
+            }).join('');
+            lineText += start + node.text + end;
+          }
+        } catch (err) {
+          _didIteratorError2 = true;
+          _iteratorError2 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion2 && _iterator2["return"] != null) {
+              _iterator2["return"]();
+            }
+          } finally {
+            if (_didIteratorError2) {
+              throw _iteratorError2;
+            }
+          }
+        }
+
+        result += "<div".concat(lineText === '\n' ? ' class="empty"' : '', ">").concat(lineText === '\n' ? '&#8203;' : lineText, "</div>");
+      } // result = result.replace(/\n/gm, '<br/>')
+      // if (result.endsWith('<br/>')) result += '&nbsp;'
+
+
+      return result; // return this.text
     }
   }]);
 
@@ -621,7 +659,12 @@ function (_HTMLElement) {
         for (var _iterator2 = nodes[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
           var node = _step2.value;
 
-          if (node.nodeName !== '#text' && node.nodeName !== 'BR') {
+          if (node.nodeName == 'BR') {
+            x += 1;
+            continue;
+          }
+
+          if (node.nodeName !== '#text') {
             if (!node.firstChild) continue;
             node = node.firstChild;
           }
@@ -656,8 +699,9 @@ function (_HTMLElement) {
       var containerData = this.getContainerAtOffset(offset);
       var node = containerData.line;
       var n = containerData.n;
-      if (node.firstChild) node = node.firstChild;
-      if (node.nodeName === 'BR') n = offset;
+      if (!node) return;
+      if (node.firstChild) node = node.firstChild; // if (node.nodeName === 'BR') n = offset
+
       console.log(offset, containerData);
       var range = window.getSelection().getRangeAt(0);
       range.setEnd(node, offset - n);
@@ -679,6 +723,7 @@ function (_HTMLElement) {
         return el.nodeName === 'BR';
       }).length;
       caretOffset += brCount;
+      console.log('BR COUNT:', brCount);
       return caretOffset;
     }
   }, {
@@ -834,6 +879,9 @@ function (_HTMLElement) {
       this.elms.editor.addCursorPosListener(function (offset) {
         console.log('Cursor position:', offset);
       });
+      this.logger({
+        type: 'INIT'
+      });
     }
   }, {
     key: "updateButtons",
@@ -918,7 +966,7 @@ function (_HTMLElement) {
   }, {
     key: "logger",
     value: function logger(historyEvent) {
-      console.log('\n%cFired event %s\n%c%s\n%s\n%c%s\n%s%o\n%s%o\n', ['font-weight: bold', 'margin-bottom: 6px'].join(';'), historyEvent.type.toUpperCase(), ['color: rgba(0,0,0,1)', 'padding-bottom: 6px'].join(';'), this.document.text, this.document.toHtml(), ['color: rgba(0,0,0,.9)', 'line-height: 1.4em'].join(';'), "Document length: ".concat(this.document.text.length, "; Cursor position: ").concat(this.elms.editor.cursorPos), 'Event details:', historyEvent, 'Bold ranges:', this.document.styles.bold.ranges);
+      console.log('\n%cFired event %s\n%c%s\n%s\n%c%s\n%s%o\n%s%o\n', ['font-weight: bold', 'margin-bottom: 6px'].join(';'), historyEvent.type.toUpperCase(), ['color: rgba(0,0,0,1)', 'padding-bottom: 6px'].join(';'), this.document.text.slice(0, this.elms.editor.cursorPos) + '][' + this.document.text.slice(this.elms.editor.cursorPos, this.document.text.length), this.document.toHtml(), ['color: rgba(0,0,0,.9)', 'line-height: 1.4em'].join(';'), "Document length: ".concat(this.document.text.length, "; Cursor position: ").concat(this.elms.editor.cursorPos), 'Event details:', historyEvent, 'Styles:', this.document.styles);
     }
   }, {
     key: "onTextUpdate",
@@ -956,6 +1004,8 @@ function (_HTMLElement) {
 
           var cP = _this4.elms.editor.getCursorPos();
 
+          console.log('Insert pos:', cP);
+
           _this4.document.insert(cP, e.key);
         } else {
           _this4.elms.editor.cursorPos = range.startOffset + e.key.length;
@@ -974,8 +1024,6 @@ function (_HTMLElement) {
         }
 
         e.preventDefault();
-        var node = window.getSelection().getRangeAt(0).endContainer;
-        if (node.nodeName == '#text') node = node.parentElement;
 
         var cP = _this4.elms.editor.getCursorPos();
 

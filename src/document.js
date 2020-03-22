@@ -1,5 +1,6 @@
 export default class Document {
-    text = 'aabb\nbbaa'
+    //    text = 'aabb\nbbaa'
+    text = ''
     history = []
 
     styles = {
@@ -7,17 +8,20 @@ export default class Document {
             openTag: '<b>',
             closeTag: '</b>',
             active: false,
-            ranges: [[2, 7]]
+            // ranges: [[2, 7]]
+            ranges: []
         },
         italic: {
             openTag: '<i>',
             closeTag: '</i>',
-            ranges: [[6, 8]]
+            // ranges: [[6, 8]]
+            ranges: []
         },
         strike: {
             openTag: '<s>',
             closeTag: '</s>',
-            ranges: [[1, 4]]
+            // ranges: [[1, 4]]
+            ranges: []
         }
     }
 
@@ -227,8 +231,10 @@ export default class Document {
     }
 
     toHtml() {
+        if (!this.text.length) return ''
         let allRanges = []
         let nodes = []
+        let lines = [[]]
         let result = ''
 
         for (let styleName in this.styles) {
@@ -257,17 +263,23 @@ export default class Document {
             start: 0,
             end: 1
         }
+        let currentLine = 0
         for (let i = 1; i < this.text.length; i++) {
             let ch = this.text[i]
             let styles = getStylesAtOffset(i)
 
-            if (stylesEqual(currentNode.styles, styles)) {
+            if (stylesEqual(currentNode.styles, styles) && ch !== '\n') {
                 currentNode.end = i
                 currentNode.text += ch
                 continue
             }
 
-            nodes.push(currentNode)
+            lines[currentLine].push(currentNode)
+            if (ch === '\n') {
+                currentLine++
+                lines.push([])
+                // continue
+            }
             currentNode = {
                 styles,
                 text: ch,
@@ -275,21 +287,29 @@ export default class Document {
                 end: i + 1
             }
         }
-        nodes.push(currentNode)
+        lines[currentLine].push(currentNode)
 
-        for (let node of nodes) {
-            let start = node.styles
-                .map(styleName => this.styles[styleName].openTag)
-                .join('')
-            let end = node.styles
-                .map(styleName => this.styles[styleName].closeTag)
-                .join('')
-
-            result += start + node.text + end
+        for (let nodes of lines) {
+            let lineText = ''
+            for (let node of nodes) {
+                let start = node.styles
+                    .map(styleName => this.styles[styleName].openTag)
+                    .join('')
+                let end = node.styles
+                    .map(styleName => this.styles[styleName].closeTag)
+                    .join('')
+                lineText += start + node.text + end
+            }
+            result += `<div${lineText === '\n' ? ' class="empty"' : ''}>${
+                lineText === '\n' ? '&#8203;' : lineText
+            }</div>`
         }
 
-        result = result.replace(/\n/gm, '<br/>')
+        // result = result.replace(/\n/gm, '<br/>')
+
+        // if (result.endsWith('<br/>')) result += '&nbsp;'
 
         return result
+        // return this.text
     }
 }

@@ -28,6 +28,7 @@ class BakaEditor extends HTMLElement {
         this.elms.editor.addCursorPosListener(offset => {
             console.log('Cursor position:', offset)
         })
+        this.logger({ type: 'INIT' })
     }
 
     updateButtons() {
@@ -109,14 +110,19 @@ class BakaEditor extends HTMLElement {
             ['font-weight: bold', 'margin-bottom: 6px'].join(';'),
             historyEvent.type.toUpperCase(),
             ['color: rgba(0,0,0,1)', 'padding-bottom: 6px'].join(';'),
-            this.document.text,
+            this.document.text.slice(0, this.elms.editor.cursorPos) +
+                '][' +
+                this.document.text.slice(
+                    this.elms.editor.cursorPos,
+                    this.document.text.length
+                ),
             this.document.toHtml(),
             ['color: rgba(0,0,0,.9)', 'line-height: 1.4em'].join(';'),
             `Document length: ${this.document.text.length}; Cursor position: ${this.elms.editor.cursorPos}`,
             'Event details:',
             historyEvent,
-            'Bold ranges:',
-            this.document.styles.bold.ranges
+            'Styles:',
+            this.document.styles
         )
     }
 
@@ -158,6 +164,7 @@ class BakaEditor extends HTMLElement {
             if (range.collapsed) {
                 this.elms.editor.cursorPos += 1
                 let cP = this.elms.editor.getCursorPos()
+                console.log('Insert pos:', cP)
                 this.document.insert(cP, e.key)
             } else {
                 this.elms.editor.cursorPos = range.startOffset + e.key.length
@@ -176,8 +183,6 @@ class BakaEditor extends HTMLElement {
             }
 
             e.preventDefault()
-            let node = window.getSelection().getRangeAt(0).endContainer
-            if (node.nodeName == '#text') node = node.parentElement
 
             let cP = this.elms.editor.getCursorPos()
             let range = this.elms.editor.getSelection()
