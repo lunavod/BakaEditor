@@ -154,21 +154,26 @@ export default class Document {
                 let range = ranges[i]
 
                 if (range[0] > start + n) {
+                    console.log('Selection: After end')
                     // Если после конца выделения - сдвинуть назад
                     this.styles[styleName].ranges[i][0] -= n
                     this.styles[styleName].ranges[i][1] -= n
+                    continue
                 }
 
                 if (range[0] >= start && range[1] <= start + n) {
+                    console.log('Selection: inside')
                     // Если полностью внутри выделения - удалить
                     remove.push(i)
                     continue
                 }
 
                 if (range[0] > start && range[1] > start + n) {
+                    console.log('Selection: beginning inside, end outside')
                     // Если начало внутри выделения, а конец снаружи
                     this.styles[styleName].ranges[i][0] = start
                     this.styles[styleName].ranges[i][1] = range[1] - n
+                    continue
                 }
 
                 if (
@@ -176,13 +181,17 @@ export default class Document {
                     range[1] > start &&
                     range[1] < start + n
                 ) {
+                    console.log('Selection: beginning before, end inside')
                     // Если начало до выделения, а конец внутри
                     this.styles[styleName].ranges[i][1] = start
+                    continue
                 }
 
                 if (range[0] < start && range[1] >= start + n) {
+                    console.log('Selection: full inside')
                     // Если выделение полностью внутри
                     this.styles[styleName].ranges[i][1] = range[1] - n
+                    continue
                 }
 
                 if (
