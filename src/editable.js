@@ -1,6 +1,7 @@
 class Editable extends HTMLElement {
     connectedCallback() {
         this.setAttribute('contenteditable', true)
+        this.addEventListener('click', () => this.focus())
     }
 
     __cursorPos = 0
@@ -110,6 +111,8 @@ class Editable extends HTMLElement {
         let result = {}
         let firstOffset = this.getContainerOffset(range.startContainer)
         let secondOffset = this.getContainerOffset(range.endContainer)
+
+        result.toString = () => range.toString()
 
         result.collapsed = range.collapsed
 

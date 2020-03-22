@@ -591,7 +591,12 @@ function (_HTMLElement) {
   _createClass(Editable, [{
     key: "connectedCallback",
     value: function connectedCallback() {
+      var _this2 = this;
+
       this.setAttribute('contenteditable', true);
+      this.addEventListener('click', function () {
+        return _this2.focus();
+      });
     }
   }, {
     key: "addCursorPosListener",
@@ -733,6 +738,11 @@ function (_HTMLElement) {
       var result = {};
       var firstOffset = this.getContainerOffset(range.startContainer);
       var secondOffset = this.getContainerOffset(range.endContainer);
+
+      result.toString = function () {
+        return range.toString();
+      };
+
       result.collapsed = range.collapsed;
       result.startContainer = range.startContainer;
       result.startOffset = range.startOffset + firstOffset;
@@ -993,6 +1003,8 @@ function (_HTMLElement) {
     value: function initEditor() {
       var _this4 = this;
 
+      console.log('Init editor');
+
       if (this.document.text.length) {
         this.elms.placeholder.classList.add('invisible');
       } else {
@@ -1000,91 +1012,86 @@ function (_HTMLElement) {
       }
 
       this.elms.editor.innerHTML = this.document.toHtml();
-      var ignore = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'];
-      this.elms.editor.addEventListener('keypress', function (e) {
+      this.elms.editor.addEventListener('input', function (e) {
+        if (e.inputType !== 'insertText') return;
         e.preventDefault();
-        if (e.key.length !== 1) return;
 
         var range = _this4.elms.editor.getSelection();
 
+        range.startOffset -= e.data.length;
+
         if (range.collapsed) {
-          _this4.elms.editor.cursorPos += 1;
+          _this4.elms.editor.cursorPos = range.startOffset + 1;
 
-          var cP = _this4.elms.editor.getCursorPos();
-
-          _this4.document.insert(cP, e.key);
+          _this4.document.insert(range.startOffset, e.data);
         } else {
-          _this4.elms.editor.cursorPos = range.startOffset + e.key.length;
+          _this4.elms.editor.cursorPos = range.startOffset + e.data.length;
 
-          _this4.document.replace(range.startOffset, range.endOffset, e.key);
+          _this4.document.replace(range.startOffset, range.endOffset, e.data);
         }
 
         var styles = _this4.document.getStylesAtOffset(range.startOffset);
 
-        console.log('STYLES', styles);
-
         for (var styleName in _this4.stylesOverride) {
-          if (_this4.stylesOverride[styleName] && !(styleName in styles)) _this4.document.mark(styleName, range.startOffset, range.startOffset + e.key.length);
-          if (!_this4.stylesOverride[styleName] && styleName in styles) _this4.document.unmark(styleName, range.startOffset, range.startOffset + e.key.length);
+          if (_this4.stylesOverride[styleName] && !(styleName in styles)) _this4.document.mark(styleName, range.startOffset, range.startOffset + e.data.length);
+          if (!_this4.stylesOverride[styleName] && styleName in styles) _this4.document.unmark(styleName, range.startOffset, range.startOffset + e.data.length);
         }
 
         _this4.stylesOverride = {};
       });
-      this.elms.editor.addEventListener('keydown', function (e) {
-        if (e.key.length === 1) return;
-
-        if (ignore.indexOf(e.key) >= 0) {
-          setTimeout(function () {
-            _this4.elms.editor.cursorPos = _this4.elms.editor.getCursorPos();
-          }, 1);
-          return;
-        }
-
-        e.preventDefault();
-
-        var cP = _this4.elms.editor.getCursorPos();
+      this.elms.editor.addEventListener('input', function (e) {
+        if (e.inputType !== 'insertParagraph') return;
 
         var range = _this4.elms.editor.getSelection();
 
-        switch (e.key) {
-          case 'Enter':
-            if (range.collapsed) {
-              _this4.elms.editor.cursorPos += 1;
+        if (range.collapsed) {
+          _this4.elms.editor.cursorPos = range.startOffset + 1;
 
-              _this4.document.insert(cP, '\n');
-            } else {
-              _this4.elms.editor.cursorPos += 1;
+          _this4.document.insert(range.startOffset, '\n');
 
-              _this4.document.replace(range.startOffset, range.endOffset, '\n');
-            }
-
-            break;
-
-          case 'Backspace':
-            if (cP < 1) break;
-
-            if (range.collapsed) {
-              _this4.elms.editor.cursorPos -= 1;
-
-              _this4.document["delete"](cP - 1, 1);
-            } else {
-              _this4.elms.editor.cursorPos = range.startOffset;
-
-              _this4.document.replace(range.startOffset, range.endOffset, '');
-            }
-
-            break;
-
-          case 'Delete':
-            if (range.collapsed) {
-              _this4.document["delete"](cP, 1, 'forward');
-            } else {
-              _this4.elms.editor.cursorPos = range.startOffset;
-
-              _this4.document.replace(range.startOffset, range.endOffset, '');
-            }
-
+          return;
         }
+
+        _this4.elms.editor.cursorPos += 1;
+
+        _this4.document.replace(range.startOffset, range.endOffset, '\n');
+      });
+      this.elms.editor.addEventListener('beforeinput', function (e) {
+        if (e.inputType !== 'deleteContentBackward') return;
+        e.preventDefault();
+        console.log(e);
+
+        var range = _this4.elms.editor.getSelection();
+
+        if (range.startOffset < 1 && range.collapsed) return;
+
+        if (range.collapsed) {
+          _this4.elms.editor.cursorPos = range.startOffset - 1;
+
+          _this4.document["delete"](range.startOffset - 1, 1);
+
+          return;
+        }
+
+        _this4.elms.editor.cursorPos = range.startOffset;
+
+        _this4.document["delete"](range.startOffset, range.endOffset - range.startOffset);
+      });
+      this.elms.editor.addEventListener('beforeinput', function (e) {
+        if (e.inputType !== 'deleteContentForward') return;
+        e.preventDefault();
+
+        var range = _this4.elms.editor.getSelection();
+
+        _this4.elms.editor.cursorPos = range.startOffset;
+
+        if (range.collapsed) {
+          _this4.document["delete"](range.startOffset, 1, 'forward');
+
+          return;
+        }
+
+        _this4.document.replace(range.startOffset, range.endOffset, '');
       });
       this.elms.editor.addEventListener('mouseup', function (e) {
         var range = window.getSelection().getRangeAt(0);

@@ -103,3 +103,7 @@ body {
 #editor:active {
     outline: none;
 }
+
+*[contenteditable] {
+    -webkit-user-select: auto !important;
+}
