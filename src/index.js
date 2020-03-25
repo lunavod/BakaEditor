@@ -266,6 +266,76 @@ class BakaEditor extends HTMLElement {
             this.document.replace(range.startOffset, range.endOffset, '')
         })
 
+        this.elms.editor.addEventListener('keydown', e => {
+            if (!e.ctrlKey || e.key !== 'Delete') return
+
+            e.preventDefault()
+
+            let text = this.document.text
+            let range = this.elms.editor.getSelection()
+
+            text = text.slice(range.startOffset, text.length)
+            let ch = this.document.text[range.startOffset]
+
+            let firstIndex
+            let regexp = ch.match(/\s/) !== null ? /\S/gm : /\s/gm
+
+            let matches = Array.from(text.matchAll(regexp))
+
+            if (matches.length) firstIndex = matches[0].index
+            else firstIndex = text.length
+
+            this.document.delete(range.startOffset, firstIndex)
+            this.elms.editor.setCursorPos(range.startOffset)
+        })
+
+        this.elms.editor.addEventListener('keydown', e => {
+            if (!e.ctrlKey || e.key !== 'Backspace') return
+
+            e.preventDefault()
+
+            let text = this.document.text
+            let range = this.elms.editor.getSelection()
+
+            text = text.slice(0, range.startOffset)
+            let ch = this.document.text[range.startOffset - 1]
+
+            let firstIndex
+            let regexp = ch.match(/\s/) !== null ? /\S/gm : /\s/gm
+
+            let matches = Array.from(text.matchAll(regexp))
+
+            if (matches.length)
+                firstIndex = matches[matches.length - 1].index + 1
+            else firstIndex = 0
+
+            this.elms.editor.setCursorPos(
+                range.startOffset - text.length + firstIndex
+            )
+            this.document.delete(
+                range.startOffset - text.length + firstIndex,
+                text.length - firstIndex
+            )
+        })
+
+        this.elms.editor.addEventListener('keyup', e => {
+            let navigationKeys = [
+                'ArrowLeft',
+                'ArrowRight',
+                'ArrowUp',
+                'ArrowDown',
+                'Home',
+                'End',
+                'PageUp',
+                'PageDown'
+            ]
+            if (navigationKeys.indexOf(e.key) < 0) return
+
+            console.log('Keyup!', this.elms.editor.getCursorPos())
+
+            this.elms.editor.setCursorPos(this.elms.editor.getCursorPos())
+        })
+
         this.elms.editor.addEventListener('mouseup', e => {
             var range = window.getSelection().getRangeAt(0)
             if (

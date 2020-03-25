@@ -79,8 +79,10 @@ class Editable extends HTMLElement {
         if (node.firstChild) node = node.firstChild
 
         var range = window.getSelection().getRangeAt(0)
+        console.log('Set cursor pos', offset, containerData)
         range.setEnd(node, offset - n)
         range.setStart(node, offset - n)
+        this.cursorPos = offset
     }
 
     getCursorPos() {

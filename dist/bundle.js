@@ -483,9 +483,9 @@ function () {
         }
 
         result += "<div".concat(lineText === '\n' ? ' class="empty"' : '', ">").concat(!lineLength ? '&#8203;' : lineText, "</div>");
-      } // result = result.replace(/\n/gm, '<br/>')
-      // if (result.endsWith('<br/>')) result += '&nbsp;'
+      }
 
+      result = result.replace(/ /gm, '&nbsp;'); // if (result.endsWith('<br/>')) result += '&nbsp;'
 
       return result; // return this.text
     }
@@ -710,8 +710,10 @@ function (_HTMLElement) {
       if (!node) return;
       if (node.firstChild) node = node.firstChild;
       var range = window.getSelection().getRangeAt(0);
+      console.log('Set cursor pos', offset, containerData);
       range.setEnd(node, offset - n);
       range.setStart(node, offset - n);
+      this.cursorPos = offset;
     }
   }, {
     key: "getCursorPos",
@@ -1102,6 +1104,49 @@ function (_HTMLElement) {
         }
 
         _this4.document.replace(range.startOffset, range.endOffset, '');
+      });
+      this.elms.editor.addEventListener('keydown', function (e) {
+        if (!e.ctrlKey || e.key !== 'Delete') return;
+        e.preventDefault();
+        var text = _this4.document.text;
+
+        var range = _this4.elms.editor.getSelection();
+
+        text = text.slice(range.startOffset, text.length);
+        var ch = _this4.document.text[range.startOffset];
+        var firstIndex;
+        var regexp = ch.match(/\s/) !== null ? /\S/gm : /\s/gm;
+        var matches = Array.from(text.matchAll(regexp));
+        if (matches.length) firstIndex = matches[0].index;else firstIndex = text.length;
+
+        _this4.document["delete"](range.startOffset, firstIndex);
+
+        _this4.elms.editor.setCursorPos(range.startOffset);
+      });
+      this.elms.editor.addEventListener('keydown', function (e) {
+        if (!e.ctrlKey || e.key !== 'Backspace') return;
+        e.preventDefault();
+        var text = _this4.document.text;
+
+        var range = _this4.elms.editor.getSelection();
+
+        text = text.slice(0, range.startOffset);
+        var ch = _this4.document.text[range.startOffset - 1];
+        var firstIndex;
+        var regexp = ch.match(/\s/) !== null ? /\S/gm : /\s/gm;
+        var matches = Array.from(text.matchAll(regexp));
+        if (matches.length) firstIndex = matches[matches.length - 1].index + 1;else firstIndex = 0;
+
+        _this4.elms.editor.setCursorPos(range.startOffset - text.length + firstIndex);
+
+        _this4.document["delete"](range.startOffset - text.length + firstIndex, text.length - firstIndex);
+      });
+      this.elms.editor.addEventListener('keyup', function (e) {
+        var navigationKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'];
+        if (navigationKeys.indexOf(e.key) < 0) return;
+        console.log('Keyup!', _this4.elms.editor.getCursorPos());
+
+        _this4.elms.editor.setCursorPos(_this4.elms.editor.getCursorPos());
       });
       this.elms.editor.addEventListener('mouseup', function (e) {
         var range = window.getSelection().getRangeAt(0);

@@ -305,7 +305,7 @@ export default class Document {
             }</div>`
         }
 
-        // result = result.replace(/\n/gm, '<br/>')
+        result = result.replace(/ /gm, '&nbsp;')
 
         // if (result.endsWith('<br/>')) result += '&nbsp;'
 
