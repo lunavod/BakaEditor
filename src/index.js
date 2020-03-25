@@ -195,22 +195,36 @@ class BakaEditor extends HTMLElement {
             this.elms.placeholder.classList.remove('invisible')
         }
 
+        let lastSelection
+
         this.elms.editor.innerHTML = this.document.toHtml()
 
+        this.elms.editor.addEventListener('beforeinput', e => {
+            lastSelection = this.elms.editor.getSelection()
+        })
+
         this.elms.editor.addEventListener('input', e => {
+            console.log(e)
             if (e.inputType !== 'insertText') return
 
             e.preventDefault()
 
-            let range = this.elms.editor.getSelection()
+            // let range = this.elms.editor.getSelection()
+            let range =
+                lastSelection && !lastSelection.collapsed
+                    ? lastSelection
+                    : this.elms.editor.getSelection()
+            console.log('insertText!', e, range)
             range.startOffset -= e.data.length
             if (range.collapsed) {
                 this.elms.editor.cursorPos = range.startOffset + 1
                 this.document.insert(range.startOffset, e.data)
             } else {
-                this.elms.editor.cursorPos = range.startOffset + e.data.length
+                this.elms.editor.setCursorPos(
+                    range.startOffset + 1 + e.data.length
+                )
                 this.document.replace(
-                    range.startOffset,
+                    range.startOffset + 1,
                     range.endOffset,
                     e.data
                 )
@@ -354,7 +368,7 @@ class BakaEditor extends HTMLElement {
 
             console.log('Keyup!', this.elms.editor.getCursorPos())
 
-            this.elms.editor.setCursorPos(this.elms.editor.getCursorPos())
+            this.elms.editor.__cursorPos = this.elms.editor.getCursorPos()
         })
 
         this.elms.editor.addEventListener('mouseup', e => {

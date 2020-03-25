@@ -1033,13 +1033,18 @@ function (_HTMLElement) {
         this.elms.placeholder.classList.remove('invisible');
       }
 
+      var lastSelection;
       this.elms.editor.innerHTML = this.document.toHtml();
+      this.elms.editor.addEventListener('beforeinput', function (e) {
+        lastSelection = _this4.elms.editor.getSelection();
+      });
       this.elms.editor.addEventListener('input', function (e) {
+        console.log(e);
         if (e.inputType !== 'insertText') return;
-        e.preventDefault();
+        e.preventDefault(); // let range = this.elms.editor.getSelection()
 
-        var range = _this4.elms.editor.getSelection();
-
+        var range = lastSelection && !lastSelection.collapsed ? lastSelection : _this4.elms.editor.getSelection();
+        console.log('insertText!', e, range);
         range.startOffset -= e.data.length;
 
         if (range.collapsed) {
@@ -1047,9 +1052,9 @@ function (_HTMLElement) {
 
           _this4.document.insert(range.startOffset, e.data);
         } else {
-          _this4.elms.editor.cursorPos = range.startOffset + e.data.length;
+          _this4.elms.editor.setCursorPos(range.startOffset + 1 + e.data.length);
 
-          _this4.document.replace(range.startOffset, range.endOffset, e.data);
+          _this4.document.replace(range.startOffset + 1, range.endOffset, e.data);
         }
 
         var styles = _this4.document.getStylesAtOffset(range.startOffset);
@@ -1155,8 +1160,7 @@ function (_HTMLElement) {
         var navigationKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'];
         if (navigationKeys.indexOf(e.key) < 0) return;
         console.log('Keyup!', _this4.elms.editor.getCursorPos());
-
-        _this4.elms.editor.setCursorPos(_this4.elms.editor.getCursorPos());
+        _this4.elms.editor.__cursorPos = _this4.elms.editor.getCursorPos();
       });
       this.elms.editor.addEventListener('mouseup', function (e) {
         var range = window.getSelection().getRangeAt(0);
