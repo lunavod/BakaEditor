@@ -483,7 +483,8 @@ function () {
           }
         }
 
-        result += "".concat(x ? '\n' : '', "<div").concat(lineText === '\n' ? ' class="empty"' : '', ">").concat(!lineLength ? '&#8203;' : lineText.replace(/\n/g, '').replace(/ /gm, '&nbsp;'), "</div>");
+        result += "".concat(x ? '\n' : '', "<div").concat(lineText === '\n' ? ' class="empty"' : '', ">").concat(!lineLength ? '&#8203;' : lineText.replace(/\n/g, '') //.replace(/ /gm, '&nbsp;')
+        , "</div>");
         x++;
       } // if (result.endsWith('<br/>')) result += '&nbsp;'
 

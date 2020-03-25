@@ -304,9 +304,7 @@ export default class Document {
             result += `${x ? '\n' : ''}<div${
                 lineText === '\n' ? ' class="empty"' : ''
             }>${
-                !lineLength
-                    ? '&#8203;'
-                    : lineText.replace(/\n/g, '').replace(/ /gm, '&nbsp;')
+                !lineLength ? '&#8203;' : lineText.replace(/\n/g, '') //.replace(/ /gm, '&nbsp;')
             }</div>`
             x++
         }

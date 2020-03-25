@@ -98,6 +98,10 @@ body {
     transition: border-color 0.2s;
 }
 
+#editor * {
+    white-space: pre;
+}
+
 #editor:focus {
     outline: 0px solid transparent;
     border-color: rgba(0, 0, 255, 0.24);
