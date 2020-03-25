@@ -24,24 +24,40 @@ class BakaEditor extends HTMLElement {
             case 'placeholder':
                 this.elms.placeholder.innerHTML = newValue
                 break
+            case 'output':
+                this.outputContainer = document.querySelector(
+                    this.getAttribute('output')
+                )
+                break
         }
     }
 
     connectedCallback() {
         this.innerHTML = this.template
+
+        this.outputContainer = document.querySelector(
+            this.getAttribute('output')
+        )
+        console.log('OUTPUT', this.getAttribute('output'), this.outputContainer)
+
         this.elms.wrapper = this.querySelector('#wrapper')
         this.elms.editor = this.querySelector('#editor')
+
         this.elms.placeholder = this.querySelector('#placeholder')
         if (this.getAttribute('placeholder'))
             this.elms.placeholder.innerHTML = this.getAttribute('placeholder')
+
         this.document = new Document()
         this.document.addEventListener('update', this.onTextUpdate.bind(this))
         this.document.addEventListener('update', this.logger.bind(this))
+
         this.initEditor()
         this.initButtons()
+
         this.elms.editor.addCursorPosListener(offset => {
             console.log('Cursor position:', offset)
         })
+
         this.logger({ type: 'INIT' })
     }
 
@@ -162,7 +178,12 @@ class BakaEditor extends HTMLElement {
         } else {
             this.elms.placeholder.classList.remove('invisible')
         }
-        this.elms.editor.innerHTML = this.document.toHtml()
+
+        const html = this.document.toHtml()
+        this.elms.editor.innerHTML = html
+        if (this.outputContainer) this.outputContainer.value = html
+        console.log(this.outputContainer)
+
         this.elms.editor.setCursorPos(this.elms.editor.cursorPos)
     }
 

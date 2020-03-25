@@ -287,6 +287,7 @@ export default class Document {
         }
         lines[currentLine].push(currentNode)
 
+        let x = 0
         for (let nodes of lines) {
             let lineText = ''
             let lineLength = 0
@@ -300,12 +301,15 @@ export default class Document {
                 lineText += start + node.text + end
                 if (node.text !== '\n') lineLength += node.text.length
             }
-            result += `<div${lineText === '\n' ? ' class="empty"' : ''}>${
-                !lineLength ? '&#8203;' : lineText
+            result += `${x ? '\n' : ''}<div${
+                lineText === '\n' ? ' class="empty"' : ''
+            }>${
+                !lineLength
+                    ? '&#8203;'
+                    : lineText.replace(/\n/g, '').replace(/ /gm, '&nbsp;')
             }</div>`
+            x++
         }
-
-        result = result.replace(/ /gm, '&nbsp;')
 
         // if (result.endsWith('<br/>')) result += '&nbsp;'
 

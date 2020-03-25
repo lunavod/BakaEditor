@@ -446,6 +446,7 @@ function () {
       }
 
       lines[currentLine].push(currentNode);
+      var x = 0;
 
       for (var _i5 = 0, _lines = lines; _i5 < _lines.length; _i5++) {
         var _nodes = _lines[_i5];
@@ -482,10 +483,10 @@ function () {
           }
         }
 
-        result += "<div".concat(lineText === '\n' ? ' class="empty"' : '', ">").concat(!lineLength ? '&#8203;' : lineText, "</div>");
-      }
+        result += "".concat(x ? '\n' : '', "<div").concat(lineText === '\n' ? ' class="empty"' : '', ">").concat(!lineLength ? '&#8203;' : lineText.replace(/\n/g, '').replace(/ /gm, '&nbsp;'), "</div>");
+        x++;
+      } // if (result.endsWith('<br/>')) result += '&nbsp;'
 
-      result = result.replace(/ /gm, '&nbsp;'); // if (result.endsWith('<br/>')) result += '&nbsp;'
 
       return result; // return this.text
     }
@@ -884,12 +885,18 @@ function (_HTMLElement) {
         case 'placeholder':
           this.elms.placeholder.innerHTML = newValue;
           break;
+
+        case 'output':
+          this.outputContainer = document.querySelector(this.getAttribute('output'));
+          break;
       }
     }
   }, {
     key: "connectedCallback",
     value: function connectedCallback() {
       this.innerHTML = this.template;
+      this.outputContainer = document.querySelector(this.getAttribute('output'));
+      console.log('OUTPUT', this.getAttribute('output'), this.outputContainer);
       this.elms.wrapper = this.querySelector('#wrapper');
       this.elms.editor = this.querySelector('#editor');
       this.elms.placeholder = this.querySelector('#placeholder');
@@ -1007,7 +1014,10 @@ function (_HTMLElement) {
         this.elms.placeholder.classList.remove('invisible');
       }
 
-      this.elms.editor.innerHTML = this.document.toHtml();
+      var html = this.document.toHtml();
+      this.elms.editor.innerHTML = html;
+      if (this.outputContainer) this.outputContainer.value = html;
+      console.log(this.outputContainer);
       this.elms.editor.setCursorPos(this.elms.editor.cursorPos);
     }
   }, {

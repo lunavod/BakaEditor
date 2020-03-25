@@ -11,6 +11,28 @@
     </head>
     <body>
         <!-- <h1 id="title">Baka editor:</h1> -->
-        <baka-editor />
+        <input type="hidden" id="hidden_input" />
+        <baka-editor output="#hidden_input"></baka-editor>
+        <pre id="output_code_preview"></pre>
     </body>
+
+    <script>
+        const input = document.querySelector('#hidden_input')
+        const pre = document.querySelector('#output_code_preview')
+
+        const config = {
+            attributes: true
+        }
+
+        const callback = (mutationList, observer) => {
+            for (let mutation of mutationList) {
+                if (mutation.attributeName === 'value') {
+                    pre.innerText = input.value
+                }
+            }
+        }
+
+        const observer = new MutationObserver(callback)
+        observer.observe(input, config)
+    </script>
 </html>

@@ -4,15 +4,22 @@ body {
     padding: 120px;
 }
 
+#output_code_preview {
+    padding: 6px;
+    font-size: 1em;
+    width: 700px;
+    min-height: calc(1.3em + 12px);
+    background: #f7f7ff;
+    border: 1px solid #d4d5ff;
+    border-radius: 5px;
+    margin-top: 54px;
+    box-sizing: border-box;
+}
+
 :root {
     --button-size: 32px;
     --editor-padding: 6px;
     --border-radius: 5px;
-}
-
-#title {
-    font-weight: 300;
-    color: rgba(0, 0, 255, 0.64);
 }
 
 #wrapper {
@@ -102,8 +109,4 @@ body {
 
 #editor:active {
     outline: none;
-}
-
-*[contenteditable] {
-    -webkit-user-select: auto !important;
 }
