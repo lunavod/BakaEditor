@@ -491,6 +491,65 @@ function () {
 
       return result; // return this.text
     }
+  }, {
+    key: "loadFromHtml",
+    value: function loadFromHtml(html) {
+      var container = document.createElement('div');
+      container.innerHTML = html;
+      var lines = container.childNodes;
+      var _iteratorNormalCompletion3 = true;
+      var _didIteratorError3 = false;
+      var _iteratorError3 = undefined;
+
+      try {
+        for (var _iterator3 = lines[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+          var line = _step3.value;
+          var children = line.childNodes;
+          var _iteratorNormalCompletion4 = true;
+          var _didIteratorError4 = false;
+          var _iteratorError4 = undefined;
+
+          try {
+            for (var _iterator4 = children[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+              var node = _step4.value;
+
+              if (node.nodeName === '#text') {
+                this.text += node.value;
+                continue;
+              }
+            }
+          } catch (err) {
+            _didIteratorError4 = true;
+            _iteratorError4 = err;
+          } finally {
+            try {
+              if (!_iteratorNormalCompletion4 && _iterator4["return"] != null) {
+                _iterator4["return"]();
+              }
+            } finally {
+              if (_didIteratorError4) {
+                throw _iteratorError4;
+              }
+            }
+          }
+
+          this.text += '\n';
+        }
+      } catch (err) {
+        _didIteratorError3 = true;
+        _iteratorError3 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion3 && _iterator3["return"] != null) {
+            _iterator3["return"]();
+          }
+        } finally {
+          if (_didIteratorError3) {
+            throw _iteratorError3;
+          }
+        }
+      }
+    }
   }]);
 
   return Document;
@@ -1036,36 +1095,42 @@ function (_HTMLElement) {
 
       var lastSelection;
       this.elms.editor.innerHTML = this.document.toHtml();
-      this.elms.editor.addEventListener('beforeinput', function (e) {
-        lastSelection = _this4.elms.editor.getSelection();
-      });
-      this.elms.editor.addEventListener('input', function (e) {
-        console.log(e);
-        if (e.inputType !== 'insertText') return;
-        e.preventDefault(); // let range = this.elms.editor.getSelection()
 
-        var range = lastSelection && !lastSelection.collapsed ? lastSelection : _this4.elms.editor.getSelection();
-        console.log('insertText!', e, range);
-        range.startOffset -= e.data.length;
-
+      var insertText = function insertText(text, range) {
         if (range.collapsed) {
-          _this4.elms.editor.cursorPos = range.startOffset + 1;
+          _this4.elms.editor.cursorPos = range.startOffset + text.length;
 
-          _this4.document.insert(range.startOffset, e.data);
+          _this4.document.insert(range.startOffset, text);
         } else {
-          _this4.elms.editor.setCursorPos(range.startOffset + 1 + e.data.length);
+          _this4.elms.editor.setCursorPos(range.startOffset + 1 + text.length);
 
-          _this4.document.replace(range.startOffset + 1, range.endOffset, e.data);
+          _this4.document.replace(range.startOffset + 1, range.endOffset, text);
         }
 
         var styles = _this4.document.getStylesAtOffset(range.startOffset);
 
         for (var styleName in _this4.stylesOverride) {
-          if (_this4.stylesOverride[styleName] && !(styleName in styles)) _this4.document.mark(styleName, range.startOffset, range.startOffset + e.data.length);
-          if (!_this4.stylesOverride[styleName] && styleName in styles) _this4.document.unmark(styleName, range.startOffset, range.startOffset + e.data.length);
+          if (_this4.stylesOverride[styleName] && !(styleName in styles)) _this4.document.mark(styleName, range.startOffset, range.startOffset + text.length);
+          if (!_this4.stylesOverride[styleName] && styleName in styles) _this4.document.unmark(styleName, range.startOffset, range.startOffset + text.length);
         }
 
         _this4.stylesOverride = {};
+      };
+
+      this.elms.editor.addEventListener('paste', function (e) {
+        e.preventDefault();
+        var clipboardData = e.clipboardData || window.clipboardData;
+        var pastedData = clipboardData.getData('Text');
+        var range = lastSelection && !lastSelection.collapsed ? lastSelection : _this4.elms.editor.getSelection();
+        insertText(pastedData, range);
+        console.log(e, pastedData, range);
+      });
+      this.elms.editor.addEventListener('input', function (e) {
+        if (e.inputType !== 'insertText') return;
+        e.preventDefault();
+        var range = lastSelection && !lastSelection.collapsed ? lastSelection : _this4.elms.editor.getSelection();
+        range.startOffset -= e.data.length;
+        insertText(e.data, range);
       });
       this.elms.editor.addEventListener('input', function (e) {
         if (e.inputType !== 'insertParagraph') return;
