@@ -3,28 +3,6 @@ export default class Document {
     text = ''
     history = []
 
-    styles = {
-        bold: {
-            openTag: '<b>',
-            closeTag: '</b>',
-            active: false,
-            // ranges: [[2, 7]]
-            ranges: []
-        },
-        italic: {
-            openTag: '<i>',
-            closeTag: '</i>',
-            // ranges: [[6, 8]]
-            ranges: []
-        },
-        strike: {
-            openTag: '<s>',
-            closeTag: '</s>',
-            // ranges: [[1, 4]]
-            ranges: []
-        }
-    }
-
     getStylesAtOffset(offset) {
         let styles = {}
         for (let styleName in this.styles) {
@@ -58,78 +36,15 @@ export default class Document {
         return styles
     }
 
-    mark(styleName, start, end) {
-        let i
-        let activeRange
+    beforeInsert() {}
 
-        for (i = 0; i < this.styles[styleName].ranges.length; i++) {
-            let range = this.styles[styleName].ranges[i]
-            if (!(range[0] <= start && range[1] >= start)) continue
-            activeRange = range
-            break
-        }
-
-        if (!activeRange) {
-            this.styles[styleName].ranges.push([start, end])
-        } else if (activeRange[1] < end) {
-            this.styles[styleName].ranges[i][1] = end
-        }
-
-        this.fireUpdate({ type: 'mark' })
-    }
-
-    unmark(styleName, start, end) {
-        let activeRanges = []
-
-        for (let i = 0; i < this.styles[styleName].ranges.length; i++) {
-            let range = this.styles[styleName].ranges[i]
-            if (
-                !(
-                    (
-                        (range[0] >= start && range[0] <= end) || // Начало в выделении
-                        (range[1] >= start && range[1] <= end) || // Конец в выделении
-                        (range[0] <= start && range[1] >= end)
-                    ) // Выделение между началом и концом
-                )
-            )
-                continue
-            activeRanges.push(i)
-            break
-        }
-
-        for (let i of activeRanges) {
-            let range = this.styles[styleName].ranges[i]
-            if (range[0] >= start && range[0] <= end && range[1] > end) {
-                // Начало в выделении, конец нет
-                this.styles[styleName].ranges[i][0] = end
-            }
-
-            if (range[1] >= start && range[1] <= end && range[0] < start) {
-                // Конец в выделении, начало нет
-                this.styles[styleName].ranges[i][1] = start
-            }
-
-            if (range[0] >= start && range[1] <= end) {
-                this.styles[styleName].ranges.splice(i, 1)
-            }
-        }
-        this.fireUpdate({ type: 'mark' })
-    }
+    beforeDelete() {}
 
     insert(start, value) {
         const historyItem = { type: 'insert', value, start }
         this.history.push(historyItem)
 
-        for (let styleName in this.styles) {
-            let ranges = this.styles[styleName].ranges
-            for (let i = 0; i < ranges.length; i++) {
-                let range = ranges[i]
-                if (range[0] >= start)
-                    this.styles[styleName].ranges[i][0] += value.length
-                if (range[1] >= start)
-                    this.styles[styleName].ranges[i][1] += value.length
-            }
-        }
+        this.beforeInsert(start, value)
 
         let arr = Array.from(this.text)
         arr.splice(start, 0, value)
@@ -147,63 +62,7 @@ export default class Document {
         const historyItem = { type: 'delete', n, start, dir }
         this.history.push(historyItem)
 
-        for (let styleName in this.styles) {
-            let ranges = this.styles[styleName].ranges
-            let remove = []
-            for (let i = 0; i < ranges.length; i++) {
-                let range = ranges[i]
-
-                if (range[0] > start + n) {
-                    console.log('Selection: After end')
-                    // Если после конца выделения - сдвинуть назад
-                    this.styles[styleName].ranges[i][0] -= n
-                    this.styles[styleName].ranges[i][1] -= n
-                    continue
-                }
-
-                if (range[0] >= start && range[1] <= start + n) {
-                    console.log('Selection: inside')
-                    // Если полностью внутри выделения - удалить
-                    remove.push(i)
-                    continue
-                }
-
-                if (range[0] > start && range[1] > start + n) {
-                    console.log('Selection: beginning inside, end outside')
-                    // Если начало внутри выделения, а конец снаружи
-                    this.styles[styleName].ranges[i][0] = start
-                    this.styles[styleName].ranges[i][1] = range[1] - n
-                    continue
-                }
-
-                if (
-                    range[0] < start &&
-                    range[1] > start &&
-                    range[1] < start + n
-                ) {
-                    console.log('Selection: beginning before, end inside')
-                    // Если начало до выделения, а конец внутри
-                    this.styles[styleName].ranges[i][1] = start
-                    continue
-                }
-
-                if (range[0] < start && range[1] >= start + n) {
-                    console.log('Selection: full inside')
-                    // Если выделение полностью внутри
-                    this.styles[styleName].ranges[i][1] = range[1] - n
-                    continue
-                }
-
-                if (
-                    this.text[this.styles[styleName].ranges[i][1] - 1] === '\n'
-                ) {
-                    this.styles[styleName].ranges[i][1] -= 1
-                }
-            }
-            for (let i of remove) {
-                this.styles[styleName].ranges.splice(i, 1)
-            }
-        }
+        this.beforeDelete(start, n)
 
         let arr = Array.from(this.text)
         arr.splice(start, n)
@@ -229,7 +88,7 @@ export default class Document {
     }
 
     toHtml() {
-        if (!this.text.length) return ''
+        if (!this.text.length) return '<div class="empty">&#8203;</div>'
         let allRanges = []
         let nodes = []
         let lines = [[]]
@@ -304,14 +163,11 @@ export default class Document {
             result += `${x ? '\n' : ''}<div${
                 lineText === '\n' ? ' class="empty"' : ''
             }>${
-                !lineLength ? '&#8203;' : lineText.replace(/\n/g, '') //.replace(/ /gm, '&nbsp;')
+                !lineLength ? '' : lineText.replace(/\n/g, '') //.replace(/ /gm, '&nbsp;')
             }</div>`
             x++
         }
 
-        // if (result.endsWith('<br/>')) result += '&nbsp;'
-
         return result
-        // return this.text
     }
 }

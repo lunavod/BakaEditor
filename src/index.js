@@ -1,4 +1,4 @@
-import Document from './document'
+import Document from './markdown_document'
 import Editable from './editable'
 
 class BakaEditor extends HTMLElement {
@@ -7,6 +7,8 @@ class BakaEditor extends HTMLElement {
             <a href="#" id="bold" class="">B</a>
             <a href="#" id="italic" class="">I</a>
             <a href="#" id="strike" class="">S</a>
+            <a href="#" id="underline" class="">U</a>
+            <a href="#" id="monospace" class="">M</a>
         </div>
         <div id="placeholder">Type: Echo!</div>
         <baka-editable id="editor" />
@@ -38,7 +40,6 @@ class BakaEditor extends HTMLElement {
         this.outputContainer = document.querySelector(
             this.getAttribute('output')
         )
-        console.log('OUTPUT', this.getAttribute('output'), this.outputContainer)
 
         this.elms.wrapper = this.querySelector('#wrapper')
         this.elms.editor = this.querySelector('#editor')
@@ -54,10 +55,6 @@ class BakaEditor extends HTMLElement {
         this.initEditor()
         this.initButtons()
 
-        this.elms.editor.addCursorPosListener(offset => {
-            console.log('Cursor position:', offset)
-        })
-
         this.logger({ type: 'INIT' })
     }
 
@@ -67,7 +64,7 @@ class BakaEditor extends HTMLElement {
         const styles = range.collapsed
             ? Object.keys(this.document.getStylesAtOffset(offset))
             : this.document.getStylesAtRange(range.startOffset, range.endOffset)
-        console.log('Styles before:', styles)
+
         for (let styleName in this.stylesOverride) {
             if (
                 styles.indexOf(styleName) >= 0 &&
@@ -82,12 +79,12 @@ class BakaEditor extends HTMLElement {
                 styles.push(styleName)
             }
         }
-        console.log('Styles after:', styles)
 
         this.elms.wrapper
             .querySelectorAll('#buttons > a')
             .forEach(el => el.classList.remove('active'))
         styles.forEach(style => {
+            if (!(style in this.elms.buttons)) return
             this.elms.buttons[style].classList.add('active')
         })
     }
@@ -101,7 +98,9 @@ class BakaEditor extends HTMLElement {
             wrapper: this.elms.wrapper.querySelector('#buttons'),
             bold: this.elms.wrapper.querySelector('#buttons #bold'),
             italic: this.elms.wrapper.querySelector('#buttons #italic'),
-            strike: this.elms.wrapper.querySelector('#buttons #strike')
+            strike: this.elms.wrapper.querySelector('#buttons #strike'),
+            underline: this.elms.wrapper.querySelector('#buttons #underline'),
+            monospace: this.elms.wrapper.querySelector('#buttons #monospace')
         }
 
         const onButtonClick = (buttonName, e) => {
@@ -141,6 +140,7 @@ class BakaEditor extends HTMLElement {
         }
 
         for (let styleName in this.document.styles) {
+            if (!(styleName in this.elms.buttons)) continue
             this.elms.buttons[styleName].addEventListener('click', e =>
                 onButtonClick(styleName, e)
             )
@@ -151,6 +151,7 @@ class BakaEditor extends HTMLElement {
     }
 
     logger(historyEvent) {
+        if (!this.debug) return
         console.log(
             '\n%cFired event %s\n%c%s\n%s\n%c%s\n%s%o\n%s%o\n',
             ['font-weight: bold', 'margin-bottom: 6px'].join(';'),
@@ -172,7 +173,7 @@ class BakaEditor extends HTMLElement {
         )
     }
 
-    onTextUpdate(event) {
+    onTextUpdate() {
         if (this.document.text.length) {
             this.elms.placeholder.classList.add('invisible')
         } else {
@@ -182,214 +183,18 @@ class BakaEditor extends HTMLElement {
         const html = this.document.toHtml()
         this.elms.editor.innerHTML = html
         if (this.outputContainer) this.outputContainer.value = html
-        console.log(this.outputContainer)
 
         this.elms.editor.setCursorPos(this.elms.editor.cursorPos)
     }
 
     initEditor() {
-        console.log('Init editor')
         if (this.document.text.length) {
             this.elms.placeholder.classList.add('invisible')
         } else {
             this.elms.placeholder.classList.remove('invisible')
         }
 
-        let lastSelection
-
-        this.elms.editor.innerHTML = this.document.toHtml()
-
-        const insertText = (text, range) => {
-            if (range.collapsed) {
-                this.elms.editor.cursorPos = range.startOffset + text.length
-                this.document.insert(range.startOffset, text)
-            } else {
-                this.elms.editor.setCursorPos(
-                    range.startOffset + 1 + text.length
-                )
-                this.document.replace(
-                    range.startOffset + 1,
-                    range.endOffset,
-                    text
-                )
-            }
-
-            let styles = this.document.getStylesAtOffset(range.startOffset)
-            for (let styleName in this.stylesOverride) {
-                if (this.stylesOverride[styleName] && !(styleName in styles))
-                    this.document.mark(
-                        styleName,
-                        range.startOffset,
-                        range.startOffset + text.length
-                    )
-                if (!this.stylesOverride[styleName] && styleName in styles)
-                    this.document.unmark(
-                        styleName,
-                        range.startOffset,
-                        range.startOffset + text.length
-                    )
-            }
-            this.stylesOverride = {}
-        }
-
-        this.elms.editor.addEventListener('paste', e => {
-            e.preventDefault()
-            const clipboardData = e.clipboardData || window.clipboardData
-            const pastedData = clipboardData.getData('Text')
-            let range =
-                lastSelection && !lastSelection.collapsed
-                    ? lastSelection
-                    : this.elms.editor.getSelection()
-            insertText(pastedData, range)
-            console.log(e, pastedData, range)
-        })
-
-        this.elms.editor.addEventListener('input', e => {
-            if (e.inputType !== 'insertText') return
-
-            e.preventDefault()
-
-            let range =
-                lastSelection && !lastSelection.collapsed
-                    ? lastSelection
-                    : this.elms.editor.getSelection()
-            range.startOffset -= e.data.length
-
-            insertText(e.data, range)
-        })
-
-        this.elms.editor.addEventListener('input', e => {
-            if (e.inputType !== 'insertParagraph') return
-
-            let range = this.elms.editor.getSelection()
-
-            if (range.collapsed) {
-                this.elms.editor.cursorPos = range.startOffset + 1
-                this.document.insert(range.startOffset, '\n')
-                return
-            }
-
-            this.elms.editor.cursorPos += 1
-            this.document.replace(range.startOffset, range.endOffset, '\n')
-        })
-
-        this.elms.editor.addEventListener('beforeinput', e => {
-            if (e.inputType !== 'deleteContentBackward') return
-
-            e.preventDefault()
-
-            console.log(e)
-
-            let range = this.elms.editor.getSelection()
-            if (range.startOffset < 1 && range.collapsed) return
-
-            if (range.collapsed) {
-                this.elms.editor.cursorPos = range.startOffset - 1
-                this.document.delete(range.startOffset - 1, 1)
-                return
-            }
-            this.elms.editor.cursorPos = range.startOffset
-
-            this.document.delete(
-                range.startOffset,
-                range.endOffset - range.startOffset
-            )
-        })
-
-        this.elms.editor.addEventListener('beforeinput', e => {
-            if (e.inputType !== 'deleteContentForward') return
-
-            e.preventDefault()
-
-            let range = this.elms.editor.getSelection()
-            this.elms.editor.cursorPos = range.startOffset
-
-            if (range.collapsed) {
-                this.document.delete(range.startOffset, 1, 'forward')
-                return
-            }
-            this.document.replace(range.startOffset, range.endOffset, '')
-        })
-
-        this.elms.editor.addEventListener('keydown', e => {
-            if (!e.ctrlKey || e.key !== 'Delete') return
-
-            e.preventDefault()
-
-            let text = this.document.text
-            let range = this.elms.editor.getSelection()
-
-            text = text.slice(range.startOffset, text.length)
-            let ch = this.document.text[range.startOffset]
-
-            let firstIndex
-            let regexp = ch.match(/\s/) !== null ? /\S/gm : /\s/gm
-
-            let matches = Array.from(text.matchAll(regexp))
-
-            if (matches.length) firstIndex = matches[0].index
-            else firstIndex = text.length
-
-            this.document.delete(range.startOffset, firstIndex)
-            this.elms.editor.setCursorPos(range.startOffset)
-        })
-
-        this.elms.editor.addEventListener('keydown', e => {
-            if (!e.ctrlKey || e.key !== 'Backspace') return
-
-            e.preventDefault()
-
-            let text = this.document.text
-            let range = this.elms.editor.getSelection()
-
-            text = text.slice(0, range.startOffset)
-            let ch = this.document.text[range.startOffset - 1]
-
-            let firstIndex
-            let regexp = ch.match(/\s/) !== null ? /\S/gm : /\s/gm
-
-            let matches = Array.from(text.matchAll(regexp))
-
-            if (matches.length)
-                firstIndex = matches[matches.length - 1].index + 1
-            else firstIndex = 0
-
-            this.elms.editor.setCursorPos(
-                range.startOffset - text.length + firstIndex
-            )
-            this.document.delete(
-                range.startOffset - text.length + firstIndex,
-                text.length - firstIndex
-            )
-        })
-
-        this.elms.editor.addEventListener('keyup', e => {
-            let navigationKeys = [
-                'ArrowLeft',
-                'ArrowRight',
-                'ArrowUp',
-                'ArrowDown',
-                'Home',
-                'End',
-                'PageUp',
-                'PageDown'
-            ]
-            if (navigationKeys.indexOf(e.key) < 0) return
-
-            console.log('Keyup!', this.elms.editor.getCursorPos())
-
-            this.elms.editor.__cursorPos = this.elms.editor.getCursorPos()
-        })
-
-        this.elms.editor.addEventListener('mouseup', e => {
-            var range = window.getSelection().getRangeAt(0)
-            if (
-                range.startContainer.parentElement.classList.contains('empty')
-            ) {
-                this.elms.editor.setCursorPos(0, range.startContainer)
-            }
-            this.elms.editor.cursorPos = this.elms.editor.getCursorPos()
-        })
+        this.elms.editor.initIO(this.document)
     }
 }
 

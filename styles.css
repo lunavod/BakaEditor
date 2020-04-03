@@ -72,6 +72,14 @@ body {
     text-decoration: line-through;
 }
 
+#buttons #underline {
+    text-decoration: underline;
+}
+
+#buttons #monospace {
+    font-family: monospace;
+}
+
 #placeholder {
     position: absolute;
     width: 100%;
@@ -113,4 +121,16 @@ body {
 
 #editor:active {
     outline: none;
+}
+
+#editor .monospace {
+    font-family: Monospace;
+    background: lightgray;
+    padding: 2px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+#editor .service {
+    color: #b1b1b1;
 }

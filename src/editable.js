@@ -4,6 +4,188 @@ class Editable extends HTMLElement {
         this.addEventListener('click', () => this.focus())
     }
 
+    initIO(io) {
+        let lastSelection
+
+        this.innerHTML = io.toHtml()
+
+        const insertText = (text, range) => {
+            if (range.collapsed) {
+                this.cursorPos = range.startOffset + text.length
+                io.insert(range.startOffset, text)
+            } else {
+                this.setCursorPos(range.startOffset + 1 + text.length)
+                io.replace(range.startOffset + 1, range.endOffset, text)
+            }
+
+            let styles = io.getStylesAtOffset(range.startOffset)
+            for (let styleName in this.stylesOverride) {
+                if (this.stylesOverride[styleName] && !(styleName in styles))
+                    io.mark(
+                        styleName,
+                        range.startOffset,
+                        range.startOffset + text.length
+                    )
+                if (!this.stylesOverride[styleName] && styleName in styles)
+                    io.unmark(
+                        styleName,
+                        range.startOffset,
+                        range.startOffset + text.length
+                    )
+            }
+            this.stylesOverride = {}
+        }
+
+        this.addEventListener('paste', e => {
+            e.preventDefault()
+            const clipboardData = e.clipboardData || window.clipboardData
+            const pastedData = clipboardData.getData('Text')
+            let range =
+                lastSelection && !lastSelection.collapsed
+                    ? lastSelection
+                    : this.getSelection()
+            insertText(pastedData, range)
+        })
+
+        this.addEventListener('input', e => {
+            if (e.inputType !== 'insertText') return
+
+            e.preventDefault()
+
+            let range =
+                lastSelection && !lastSelection.collapsed
+                    ? lastSelection
+                    : this.getSelection()
+            range.startOffset -= e.data.length
+
+            insertText(e.data, range)
+        })
+
+        this.addEventListener('input', e => {
+            if (e.inputType !== 'insertParagraph') return
+
+            let range = this.getSelection()
+
+            if (range.collapsed) {
+                this.cursorPos = range.startOffset
+                io.insert(range.startOffset, '\n')
+                return
+            }
+
+            this.cursorPos = range.startOffset
+            io.replace(range.startOffset, range.endOffset, '\n')
+        })
+
+        this.addEventListener('beforeinput', e => {
+            if (e.inputType !== 'deleteContentBackward') return
+
+            e.preventDefault()
+
+            let range = this.getSelection()
+            if (range.startOffset < 1 && range.collapsed) return
+
+            if (range.collapsed) {
+                this.cursorPos = range.startOffset - 1
+                io.delete(range.startOffset - 1, 1)
+                return
+            }
+            this.cursorPos = range.startOffset
+
+            io.delete(range.startOffset, range.endOffset - range.startOffset)
+        })
+
+        this.addEventListener('beforeinput', e => {
+            if (e.inputType !== 'deleteContentForward') return
+
+            e.preventDefault()
+
+            let range = this.getSelection()
+            this.cursorPos = range.startOffset
+
+            if (range.collapsed) {
+                io.delete(range.startOffset, 1, 'forward')
+                return
+            }
+            io.replace(range.startOffset, range.endOffset, '')
+        })
+
+        this.addEventListener('keydown', e => {
+            if (!e.ctrlKey || e.key !== 'Delete') return
+
+            e.preventDefault()
+
+            let text = io.text
+            let range = this.getSelection()
+
+            text = text.slice(range.startOffset, text.length)
+            let ch = io.text[range.startOffset]
+
+            let firstIndex
+            let regexp = ch.match(/\s/) !== null ? /\S/gm : /\s/gm
+
+            let matches = Array.from(text.matchAll(regexp))
+
+            if (matches.length) firstIndex = matches[0].index
+            else firstIndex = text.length
+
+            io.delete(range.startOffset, firstIndex)
+            this.setCursorPos(range.startOffset)
+        })
+
+        this.addEventListener('keydown', e => {
+            if (!e.ctrlKey || e.key !== 'Backspace') return
+
+            e.preventDefault()
+
+            let text = io.text
+            let range = this.getSelection()
+
+            text = text.slice(0, range.startOffset)
+            let ch = io.text[range.startOffset - 1]
+
+            let firstIndex
+            let regexp = ch.match(/\s/) !== null ? /\S/gm : /\s/gm
+
+            let matches = Array.from(text.matchAll(regexp))
+
+            if (matches.length)
+                firstIndex = matches[matches.length - 1].index + 1
+            else firstIndex = 0
+
+            this.setCursorPos(range.startOffset - text.length + firstIndex)
+            io.delete(
+                range.startOffset - text.length + firstIndex,
+                text.length - firstIndex
+            )
+        })
+
+        this.addEventListener('keyup', e => {
+            let navigationKeys = [
+                'ArrowLeft',
+                'ArrowRight',
+                'ArrowUp',
+                'ArrowDown',
+                'Home',
+                'End',
+                'PageUp',
+                'PageDown'
+            ]
+            if (navigationKeys.indexOf(e.key) < 0) return
+
+            this.cursorPos = this.getCursorPos()
+        })
+
+        this.addEventListener('mouseup', e => {
+            var range = window.getSelection().getRangeAt(0)
+            if (
+                range.startContainer.parentElement.classList.contains('empty')
+            ) {
+                this.setCursorPos(0, range.startContainer)
+            }
+            this.cursorPos = this.getCursorPos()
+        })
+    }
+
     __cursorPos = 0
     __cursorPosListeners = []
     get cursorPos() {
@@ -79,7 +261,6 @@ class Editable extends HTMLElement {
         if (node.firstChild) node = node.firstChild
 
         var range = window.getSelection().getRangeAt(0)
-        console.log('Set cursor pos', offset, containerData)
         range.setEnd(node, offset - n)
         range.setStart(node, offset - n)
         this.cursorPos = offset
