@@ -114,10 +114,18 @@ function () {
 
     _defineProperty(this, "history", []);
 
+    _defineProperty(this, "styles", void 0);
+
     _defineProperty(this, "listeners", {});
   }
 
   _createClass(Document, [{
+    key: "beforeDelete",
+    value: function beforeDelete(start, n) {}
+  }, {
+    key: "beforeInsert",
+    value: function beforeInsert(start, text) {}
+  }, {
     key: "getStylesAtOffset",
     value: function getStylesAtOffset(offset) {
       var styles = {};
@@ -149,12 +157,6 @@ function () {
 
       return styles;
     }
-  }, {
-    key: "beforeInsert",
-    value: function beforeInsert() {}
-  }, {
-    key: "beforeDelete",
-    value: function beforeDelete() {}
   }, {
     key: "insert",
     value: function insert(start, value) {
@@ -204,15 +206,11 @@ function () {
     }
   }, {
     key: "fireUpdate",
-    value: function fireUpdate() {
-      for (var _len = arguments.length, data = new Array(_len), _key = 0; _key < _len; _key++) {
-        data[_key] = arguments[_key];
-      }
-
+    value: function fireUpdate(event) {
       var callbacks = this.listeners['update'];
       if (!callbacks) return;
       callbacks.forEach(function (callback) {
-        return callback.apply(void 0, data);
+        return callback(event);
       });
     }
   }, {
@@ -222,7 +220,6 @@ function () {
 
       if (!this.text.length) return '<div class="empty">&#8203;</div>';
       var allRanges = [];
-      var nodes = [];
       var lines = [[]];
       var result = '';
 
@@ -308,7 +305,7 @@ function () {
       var x = 0;
 
       for (var _i = 0, _lines = lines; _i < _lines.length; _i++) {
-        var _nodes = _lines[_i];
+        var nodes = _lines[_i];
         var lineText = '';
         var lineLength = 0;
         var _iteratorNormalCompletion2 = true;
@@ -316,7 +313,7 @@ function () {
         var _iteratorError2 = undefined;
 
         try {
-          for (var _iterator2 = _nodes[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+          for (var _iterator2 = nodes[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
             var node = _step2.value;
             var start = node.styles.map(function (styleName) {
               return _this.styles[styleName].openTag;
@@ -342,8 +339,7 @@ function () {
           }
         }
 
-        result += "".concat(x ? '\n' : '', "<div").concat(lineText === '\n' ? ' class="empty"' : '', ">").concat(!lineLength ? '' : lineText.replace(/\n/g, '') //.replace(/ /gm, '&nbsp;')
-        , "</div>");
+        result += "".concat(x ? '\n' : '', "<div").concat(lineText === '\n' ? ' class="empty"' : '', ">").concat(!lineLength ? '' : lineText.replace(/\n/g, ''), "</div>");
         x++;
       }
 
@@ -453,7 +449,7 @@ function (_HTMLElement) {
     value: function connectedCallback() {
       var _this2 = this;
 
-      this.setAttribute('contenteditable', true);
+      this.setAttribute('contenteditable', 'true');
       this.addEventListener('click', function () {
         return _this2.focus();
       });
@@ -475,15 +471,6 @@ function (_HTMLElement) {
 
           io.replace(range.startOffset + 1, range.endOffset, text);
         }
-
-        var styles = io.getStylesAtOffset(range.startOffset);
-
-        for (var styleName in _this3.stylesOverride) {
-          if (_this3.stylesOverride[styleName] && !(styleName in styles)) io.mark(styleName, range.startOffset, range.startOffset + text.length);
-          if (!_this3.stylesOverride[styleName] && styleName in styles) io.unmark(styleName, range.startOffset, range.startOffset + text.length);
-        }
-
-        _this3.stylesOverride = {};
       };
 
       this.addEventListener('paste', function (e) {
@@ -586,11 +573,11 @@ function (_HTMLElement) {
         if (navigationKeys.indexOf(e.key) < 0) return;
         _this3.cursorPos = _this3.getCursorPos();
       });
-      this.addEventListener('mouseup', function (e) {
+      this.addEventListener('mouseup', function () {
         var range = window.getSelection().getRangeAt(0);
 
         if (range.startContainer.parentElement.classList.contains('empty')) {
-          _this3.setCursorPos(0, range.startContainer);
+          _this3.setCursorPos(0);
         }
 
         _this3.cursorPos = _this3.getCursorPos();
@@ -655,7 +642,7 @@ function (_HTMLElement) {
         }).flat(Infinity);
       }
 
-      var lastNode;
+      var lastNode = undefined;
       var x = 0;
       var _iteratorNormalCompletion2 = true;
       var _didIteratorError2 = false;
@@ -871,6 +858,8 @@ function (_HTMLElement) {
 
     _defineProperty(_assertThisInitialized(_this), "stylesOverride", {});
 
+    _defineProperty(_assertThisInitialized(_this), "outputContainer", void 0);
+
     return _this;
   }
 
@@ -977,7 +966,7 @@ function (_HTMLElement) {
 
         var button = _this3.elms.buttons[buttonName];
         var isActive = button.classList.contains('active');
-        _this3.stylesOverride[buttonName] = !isActive; // this.elms.buttons[buttonName].classList.toggle('active')
+        _this3.stylesOverride[buttonName] = !isActive;
       };
 
       var _loop = function _loop(styleName) {
@@ -994,7 +983,7 @@ function (_HTMLElement) {
         if (_ret === "continue") continue;
       }
 
-      window.document.addEventListener('click', function (e) {
+      window.document.addEventListener('click', function () {
         _this3.updateButtons();
       });
     }
@@ -1154,6 +1143,7 @@ function (_Document) {
   }, {
     key: "styles",
     // text = '*Привет*, **мир**!\n***Сегодня*** __я__ ~~делаю~~ `маркдаун`!'
+    set: function set(value) {},
     get: function get() {
       var _this = this;
 
@@ -1171,7 +1161,6 @@ function (_Document) {
         _this.text.replace(regexp, function (fullMatch, match, index) {
           var start = index + n;
           var end = index + fullMatch.length - n;
-          console.log(match, start, end, fullMatch);
           var _iteratorNormalCompletion = true;
           var _didIteratorError = false;
           var _iteratorError = undefined;
@@ -1202,7 +1191,7 @@ function (_Document) {
         });
       };
 
-      process(['bold'], /(?<!\*|\\\*)\*{2,2}[^\*\n](.+?)[^*]\*{2,2}(?!\*|\\)/gm, 2);
+      process(['bold'], /(?<!\*|\\\*)\*{2,2}[^*\n](.+?)[^*]\*{2,2}(?!\*|\\)/gm, 2);
       process(['italic'], /((?<!\*|\\)\*[^*\n].+?[^*|\\]\*(?!\*))/gm, 1);
       process(['bold', 'italic'], /(?<!\*|\\)\*{3,3}[^*\n](.+?)[^*|\\]\*{3,3}(?!\*)/gm, 3);
       process(['underline'], /__(.+?)__/gm, 2);

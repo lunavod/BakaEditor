@@ -1,3 +1,5 @@
+// @flow
+
 import Document from './markdown_document'
 import Editable from './editable'
 
@@ -14,8 +16,11 @@ class BakaEditor extends HTMLElement {
         <baka-editable id="editor" />
     </div>`
 
-    elms = {}
+    elms: {
+        placeholder: HTMLElement,
+    } = {}
     stylesOverride = {}
+    outputContainer: HTMLElement | void
 
     static get observedAttributes() {
         return ['placeholder']
@@ -82,8 +87,8 @@ class BakaEditor extends HTMLElement {
 
         this.elms.wrapper
             .querySelectorAll('#buttons > a')
-            .forEach(el => el.classList.remove('active'))
-        styles.forEach(style => {
+            .forEach((el) => el.classList.remove('active'))
+        styles.forEach((style) => {
             if (!(style in this.elms.buttons)) return
             this.elms.buttons[style].classList.add('active')
         })
@@ -100,7 +105,7 @@ class BakaEditor extends HTMLElement {
             italic: this.elms.wrapper.querySelector('#buttons #italic'),
             strike: this.elms.wrapper.querySelector('#buttons #strike'),
             underline: this.elms.wrapper.querySelector('#buttons #underline'),
-            monospace: this.elms.wrapper.querySelector('#buttons #monospace')
+            monospace: this.elms.wrapper.querySelector('#buttons #monospace'),
         }
 
         const onButtonClick = (buttonName, e) => {
@@ -135,17 +140,15 @@ class BakaEditor extends HTMLElement {
             const isActive = button.classList.contains('active')
 
             this.stylesOverride[buttonName] = !isActive
-
-            // this.elms.buttons[buttonName].classList.toggle('active')
         }
 
         for (let styleName in this.document.styles) {
             if (!(styleName in this.elms.buttons)) continue
-            this.elms.buttons[styleName].addEventListener('click', e =>
+            this.elms.buttons[styleName].addEventListener('click', (e) =>
                 onButtonClick(styleName, e)
             )
         }
-        window.document.addEventListener('click', e => {
+        window.document.addEventListener('click', () => {
             this.updateButtons()
         })
     }

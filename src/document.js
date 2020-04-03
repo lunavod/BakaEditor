@@ -1,9 +1,35 @@
+// @flow
+
+type InsertEvent = {
+    type: 'insert',
+    start: number,
+    value: string
+}
+
+type DeleteEvent = {
+    type: 'delete',
+    start: number,
+    n: number,
+    dir: 'back' | 'forward'
+}
+
 export default class Document {
     //    text = 'aabb\nbbaa'
     text = ''
-    history = []
+    history: Array<InsertEvent | DeleteEvent> = []
 
-    getStylesAtOffset(offset) {
+    styles: $ReadOnly<{
+        [string]: {
+            openTag: string,
+            closeTag: string,
+            ranges: [number, number][]
+        }
+    }>
+
+    beforeDelete(start: number, n: number) {}
+    beforeInsert(start: number, text: string) {}
+
+    getStylesAtOffset(offset: number) {
         let styles = {}
         for (let styleName in this.styles) {
             for (let i = 0; i < this.styles[styleName].ranges.length; i++) {
@@ -15,7 +41,7 @@ export default class Document {
         return styles
     }
 
-    getStylesAtRange(start, end) {
+    getStylesAtRange(start: number, end: number) {
         let styles = []
         for (let styleName in this.styles) {
             for (let i = 0; i < this.styles[styleName].ranges.length; i++) {
@@ -36,12 +62,8 @@ export default class Document {
         return styles
     }
 
-    beforeInsert() {}
-
-    beforeDelete() {}
-
-    insert(start, value) {
-        const historyItem = { type: 'insert', value, start }
+    insert(start: number, value: string): void {
+        const historyItem: InsertEvent = { type: 'insert', value, start }
         this.history.push(historyItem)
 
         this.beforeInsert(start, value)
@@ -53,13 +75,13 @@ export default class Document {
         this.fireUpdate(historyItem)
     }
 
-    replace(start, end, value) {
+    replace(start: number, end: number, value: string): void {
         this.delete(start, end - start)
         if (value) this.insert(start, value)
     }
 
-    delete(start, n, dir = 'back') {
-        const historyItem = { type: 'delete', n, start, dir }
+    delete(start: number, n: number, dir: 'back' | 'forward' = 'back') {
+        const historyItem: DeleteEvent = { type: 'delete', n, start, dir }
         this.history.push(historyItem)
 
         this.beforeDelete(start, n)
@@ -71,9 +93,9 @@ export default class Document {
         this.fireUpdate(historyItem)
     }
 
-    listeners = {}
+    listeners: { [string]: Array<(event: mixed) => void> } = {}
 
-    addEventListener(event, callback) {
+    addEventListener(event: string, callback: (event: mixed) => void): void {
         if (this.listeners[event]) {
             this.listeners[event].push(callback)
         } else {
@@ -81,16 +103,15 @@ export default class Document {
         }
     }
 
-    fireUpdate(...data) {
+    fireUpdate(event: mixed): void {
         const callbacks = this.listeners['update']
         if (!callbacks) return
-        callbacks.forEach(callback => callback(...data))
+        callbacks.forEach(callback => callback(event))
     }
 
-    toHtml() {
+    toHtml(): string {
         if (!this.text.length) return '<div class="empty">&#8203;</div>'
-        let allRanges = []
-        let nodes = []
+        let allRanges: Array<{ style: string, range: [number, number] }> = []
         let lines = [[]]
         let result = ''
 
@@ -100,7 +121,7 @@ export default class Document {
             }
         }
 
-        const getStylesAtOffset = offset => {
+        const getStylesAtOffset = (offset: number): string[] => {
             return allRanges
                 .filter(rangeData => {
                     let range = rangeData.range
@@ -109,12 +130,17 @@ export default class Document {
                 .map(rangeData => rangeData.style)
         }
 
-        const stylesEqual = (a, b) => {
+        const stylesEqual = (a: string[], b: string[]) => {
             if (a.length !== b.length) return false
             return !a.filter(el => b.indexOf(el) < 0).length
         }
 
-        let currentNode = {
+        let currentNode: {
+            styles: string[],
+            text: string,
+            start: number,
+            end: number
+        } = {
             styles: getStylesAtOffset(0),
             text: this.text[0],
             start: 0,
@@ -162,9 +188,7 @@ export default class Document {
             }
             result += `${x ? '\n' : ''}<div${
                 lineText === '\n' ? ' class="empty"' : ''
-            }>${
-                !lineLength ? '' : lineText.replace(/\n/g, '') //.replace(/ /gm, '&nbsp;')
-            }</div>`
+            }>${!lineLength ? '' : lineText.replace(/\n/g, '')}</div>`
             x++
         }
 

@@ -1,10 +1,16 @@
+// @flow
+
 import Document from './document'
 
 export default class MarkdownDocument extends Document {
     // text = '*Привет*, **мир**!\n***Сегодня*** __я__ ~~делаю~~ `маркдаун`!'
+
+    set styles(value: any) {}
     get styles() {
         let t = this.text
-        let ranges = {
+        let ranges: {
+            [string]: [number, number][]
+        } = {
             bold: [],
             italic: [],
             underline: [],
@@ -17,7 +23,6 @@ export default class MarkdownDocument extends Document {
             this.text.replace(regexp, (fullMatch, match, index) => {
                 let start = index + n
                 let end = index + fullMatch.length - n
-                console.log(match, start, end, fullMatch)
                 for (let styleName of styleNames) {
                     ranges[styleName].push([start, end])
                 }
@@ -29,7 +34,7 @@ export default class MarkdownDocument extends Document {
 
         process(
             ['bold'],
-            /(?<!\*|\\\*)\*{2,2}[^\*\n](.+?)[^*]\*{2,2}(?!\*|\\)/gm,
+            /(?<!\*|\\\*)\*{2,2}[^*\n](.+?)[^*]\*{2,2}(?!\*|\\)/gm,
             2
         )
         process(['italic'], /((?<!\*|\\)\*[^*\n].+?[^*|\\]\*(?!\*))/gm, 1)
@@ -76,8 +81,10 @@ export default class MarkdownDocument extends Document {
         }
     }
 
-    getStylesAtOffset(offset) {
-        let styles = {}
+    getStylesAtOffset(offset: number) {
+        let styles: {
+            [string]: [number, number]
+        } = {}
         for (let styleName in this.styles) {
             for (let i = 0; i < this.styles[styleName].ranges.length; i++) {
                 let range = this.styles[styleName].ranges[i]
@@ -88,11 +95,11 @@ export default class MarkdownDocument extends Document {
         return styles
     }
 
-    getStylesAtRange(start, end) {
-        let styles = []
+    getStylesAtRange(start: number, end: number) {
+        let styles: string[] = []
         for (let styleName in this.styles) {
             for (let i = 0; i < this.styles[styleName].ranges.length; i++) {
-                let range = this.styles[styleName].ranges[i]
+                let range: [number, number] = this.styles[styleName].ranges[i]
                 if (
                     !(
                         (

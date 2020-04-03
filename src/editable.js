@@ -1,15 +1,37 @@
+// @flow
+
+type CustomSelection = {
+    startOffset: number,
+    endOffset: number,
+
+    startContainer: Node,
+    endContainer: Node,
+
+    toString: () => string,
+    collapsed: boolean
+}
+
+interface IO {
+    delete(start: number, n: number, direction?: string): void;
+    insert(start: number, text: string): void;
+    replace(start: number, end: number, text: string): void;
+    toHtml(): string;
+
+    text: string;
+}
+
 class Editable extends HTMLElement {
-    connectedCallback() {
-        this.setAttribute('contenteditable', true)
+    connectedCallback(): void {
+        this.setAttribute('contenteditable', 'true')
         this.addEventListener('click', () => this.focus())
     }
 
-    initIO(io) {
-        let lastSelection
+    initIO(io: IO): void {
+        let lastSelection: CustomSelection
 
         this.innerHTML = io.toHtml()
 
-        const insertText = (text, range) => {
+        const insertText = (text: string, range: CustomSelection): void => {
             if (range.collapsed) {
                 this.cursorPos = range.startOffset + text.length
                 io.insert(range.startOffset, text)
@@ -17,26 +39,9 @@ class Editable extends HTMLElement {
                 this.setCursorPos(range.startOffset + 1 + text.length)
                 io.replace(range.startOffset + 1, range.endOffset, text)
             }
-
-            let styles = io.getStylesAtOffset(range.startOffset)
-            for (let styleName in this.stylesOverride) {
-                if (this.stylesOverride[styleName] && !(styleName in styles))
-                    io.mark(
-                        styleName,
-                        range.startOffset,
-                        range.startOffset + text.length
-                    )
-                if (!this.stylesOverride[styleName] && styleName in styles)
-                    io.unmark(
-                        styleName,
-                        range.startOffset,
-                        range.startOffset + text.length
-                    )
-            }
-            this.stylesOverride = {}
         }
 
-        this.addEventListener('paste', e => {
+        this.addEventListener('paste', (e: ClipboardEvent): void => {
             e.preventDefault()
             const clipboardData = e.clipboardData || window.clipboardData
             const pastedData = clipboardData.getData('Text')
@@ -47,7 +52,7 @@ class Editable extends HTMLElement {
             insertText(pastedData, range)
         })
 
-        this.addEventListener('input', e => {
+        this.addEventListener('input', (e: any): void => {
             if (e.inputType !== 'insertText') return
 
             e.preventDefault()
@@ -61,7 +66,7 @@ class Editable extends HTMLElement {
             insertText(e.data, range)
         })
 
-        this.addEventListener('input', e => {
+        this.addEventListener('input', (e: any): void => {
             if (e.inputType !== 'insertParagraph') return
 
             let range = this.getSelection()
@@ -76,12 +81,12 @@ class Editable extends HTMLElement {
             io.replace(range.startOffset, range.endOffset, '\n')
         })
 
-        this.addEventListener('beforeinput', e => {
+        this.addEventListener('beforeinput', (e: any): void => {
             if (e.inputType !== 'deleteContentBackward') return
 
             e.preventDefault()
 
-            let range = this.getSelection()
+            let range: CustomSelection = this.getSelection()
             if (range.startOffset < 1 && range.collapsed) return
 
             if (range.collapsed) {
@@ -94,7 +99,7 @@ class Editable extends HTMLElement {
             io.delete(range.startOffset, range.endOffset - range.startOffset)
         })
 
-        this.addEventListener('beforeinput', e => {
+        this.addEventListener('beforeinput', (e: any): void => {
             if (e.inputType !== 'deleteContentForward') return
 
             e.preventDefault()
@@ -109,7 +114,7 @@ class Editable extends HTMLElement {
             io.replace(range.startOffset, range.endOffset, '')
         })
 
-        this.addEventListener('keydown', e => {
+        this.addEventListener('keydown', (e: any): void => {
             if (!e.ctrlKey || e.key !== 'Delete') return
 
             e.preventDefault()
@@ -132,7 +137,7 @@ class Editable extends HTMLElement {
             this.setCursorPos(range.startOffset)
         })
 
-        this.addEventListener('keydown', e => {
+        this.addEventListener('keydown', (e: any): void => {
             if (!e.ctrlKey || e.key !== 'Backspace') return
 
             e.preventDefault()
@@ -159,7 +164,7 @@ class Editable extends HTMLElement {
             )
         })
 
-        this.addEventListener('keyup', e => {
+        this.addEventListener('keyup', (e: any): void => {
             let navigationKeys = [
                 'ArrowLeft',
                 'ArrowRight',
@@ -175,12 +180,12 @@ class Editable extends HTMLElement {
             this.cursorPos = this.getCursorPos()
         })
 
-        this.addEventListener('mouseup', e => {
+        this.addEventListener('mouseup', (): void => {
             var range = window.getSelection().getRangeAt(0)
             if (
                 range.startContainer.parentElement.classList.contains('empty')
             ) {
-                this.setCursorPos(0, range.startContainer)
+                this.setCursorPos(0)
             }
             this.cursorPos = this.getCursorPos()
         })
@@ -191,20 +196,20 @@ class Editable extends HTMLElement {
     get cursorPos() {
         return this.__cursorPos
     }
-    set cursorPos(val) {
+    set cursorPos(val: number): void {
         this.__cursorPos = val
         this.__cursorPosListeners.forEach(cb => setTimeout(() => cb(val), 1))
     }
 
-    addCursorPosListener(cb) {
+    addCursorPosListener(cb: (event: mixed) => void): void {
         this.__cursorPosListeners.push(cb)
     }
 
-    getContainerOffset(container) {
-        let nodes = Array.from(this.childNodes)
+    getContainerOffset(container: HTMLElement): number {
+        let nodes: Array<any> = Array.from(this.childNodes)
         while (nodes.filter(node => node.childNodes.length).length) {
             nodes = nodes
-                .map(el =>
+                .map((el: Node) =>
                     el.nodeName === '#text' || el.nodeName === 'BR'
                         ? [el]
                         : Array.from(el.childNodes)
@@ -221,11 +226,11 @@ class Editable extends HTMLElement {
         return offset
     }
 
-    getContainerAtOffset(offset) {
-        let nodes = Array.from(this.childNodes)
+    getContainerAtOffset(offset: number): { line: Node, n: number } {
+        let nodes: Array<any> = Array.from(this.childNodes)
         while (nodes.filter(node => node.childNodes.length).length) {
             nodes = nodes
-                .map(el =>
+                .map((el: Node) =>
                     el.nodeName === '#text' || el.nodeName === 'BR'
                         ? [el]
                         : Array.from(el.childNodes)
@@ -233,7 +238,7 @@ class Editable extends HTMLElement {
                 .flat(Infinity)
         }
 
-        let lastNode
+        let lastNode: Node | void = undefined
         let x = 0
         for (let node of nodes) {
             if (node.nodeName == 'BR') {
@@ -251,7 +256,7 @@ class Editable extends HTMLElement {
         return { line: lastNode || nodes[0], n: x }
     }
 
-    setCursorPos(offset) {
+    setCursorPos(offset: number): void {
         let containerData = this.getContainerAtOffset(offset)
         let node = containerData.line
         let n = containerData.n
@@ -266,7 +271,7 @@ class Editable extends HTMLElement {
         this.cursorPos = offset
     }
 
-    getCursorPos() {
+    getCursorPos(): number {
         var caretOffset = 0
         var range = window.getSelection().getRangeAt(0)
         var selected = range.toString().length
@@ -277,21 +282,21 @@ class Editable extends HTMLElement {
         caretOffset = preCaretRange.toString().length - selected
 
         const brCount = Array.from(preCaretRange.cloneContents().childNodes)
-            .map(el =>
+            .map((el: HTMLElement) =>
                 el.nodeName === '#text'
                     ? []
                     : Array.from(el.querySelectorAll('*'))
             )
             .flat(Infinity)
-            .filter(el => el.nodeName === 'BR').length
+            .filter((el: any) => el.nodeName === 'BR').length
         caretOffset += brCount
 
         return caretOffset
     }
 
-    getSelection() {
+    getSelection(): CustomSelection {
         let range = window.getSelection().getRangeAt(0)
-        let result = {}
+        let result: CustomSelection = {}
         let firstOffset = this.getContainerOffset(range.startContainer)
         let secondOffset = this.getContainerOffset(range.endContainer)
 
