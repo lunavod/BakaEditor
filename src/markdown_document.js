@@ -3,20 +3,19 @@
 import Document from './document'
 
 export default class MarkdownDocument extends Document {
-    // text = '*Привет*, **мир**!\n***Сегодня*** __я__ ~~делаю~~ `маркдаун`!'
+    text = '*Привет*, **мир**!\n***Сегодня*** __я__ ~~делаю~~ `маркдаун`!'
 
     set styles(value: any) {}
     get styles() {
-        let t = this.text
         let ranges: {
-            [string]: [number, number][]
+            [string]: [number, number][],
         } = {
             bold: [],
             italic: [],
             underline: [],
             strike: [],
             monospace: [],
-            service: []
+            service: [],
         }
 
         const process = (styleNames, regexp, n) => {
@@ -46,44 +45,44 @@ export default class MarkdownDocument extends Document {
         process(['underline'], /__(.+?)__/gm, 2)
         process(['strike'], /~~(.+?)~~/gm, 2)
         process(['monospace'], /`([^`]*)`/, 1)
-
+        console.log(ranges)
         return {
             bold: {
                 openTag: '<b>',
                 closeTag: '</b>',
-                ranges: ranges.bold
+                ranges: ranges.bold,
             },
             italic: {
                 openTag: '<i>',
                 closeTag: '</i>',
-                ranges: ranges.italic
+                ranges: ranges.italic,
             },
             underline: {
                 openTag: '<u>',
                 closeTag: '</u>',
-                ranges: ranges.underline
+                ranges: ranges.underline,
             },
             strike: {
                 openTag: '<s>',
                 closeTag: '</s>',
-                ranges: ranges.strike
+                ranges: ranges.strike,
             },
             monospace: {
                 openTag: '<span class="monospace">',
                 closeTag: '</span>',
-                ranges: ranges.monospace
+                ranges: ranges.monospace,
             },
             service: {
                 openTag: '<span class="service">',
                 closeTag: '</span>',
-                ranges: ranges.service
-            }
+                ranges: ranges.service,
+            },
         }
     }
 
     getStylesAtOffset(offset: number) {
         let styles: {
-            [string]: [number, number]
+            [string]: [number, number],
         } = {}
         for (let styleName in this.styles) {
             for (let i = 0; i < this.styles[styleName].ranges.length; i++) {

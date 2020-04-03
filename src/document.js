@@ -3,28 +3,20 @@
 type InsertEvent = {
     type: 'insert',
     start: number,
-    value: string
+    value: string,
 }
 
 type DeleteEvent = {
     type: 'delete',
     start: number,
     n: number,
-    dir: 'back' | 'forward'
+    dir: 'back' | 'forward',
 }
 
 export default class Document {
     //    text = 'aabb\nbbaa'
     text = ''
     history: Array<InsertEvent | DeleteEvent> = []
-
-    styles: $ReadOnly<{
-        [string]: {
-            openTag: string,
-            closeTag: string,
-            ranges: [number, number][]
-        }
-    }>
 
     beforeDelete(start: number, n: number) {}
     beforeInsert(start: number, text: string) {}
@@ -106,7 +98,7 @@ export default class Document {
     fireUpdate(event: mixed): void {
         const callbacks = this.listeners['update']
         if (!callbacks) return
-        callbacks.forEach(callback => callback(event))
+        callbacks.forEach((callback) => callback(event))
     }
 
     toHtml(): string {
@@ -123,28 +115,28 @@ export default class Document {
 
         const getStylesAtOffset = (offset: number): string[] => {
             return allRanges
-                .filter(rangeData => {
+                .filter((rangeData) => {
                     let range = rangeData.range
                     return range[0] <= offset && range[1] > offset
                 })
-                .map(rangeData => rangeData.style)
+                .map((rangeData) => rangeData.style)
         }
 
         const stylesEqual = (a: string[], b: string[]) => {
             if (a.length !== b.length) return false
-            return !a.filter(el => b.indexOf(el) < 0).length
+            return !a.filter((el) => b.indexOf(el) < 0).length
         }
 
         let currentNode: {
             styles: string[],
             text: string,
             start: number,
-            end: number
+            end: number,
         } = {
             styles: getStylesAtOffset(0),
             text: this.text[0],
             start: 0,
-            end: 1
+            end: 1,
         }
         let currentLine = 0
         for (let i = 1; i < this.text.length; i++) {
@@ -167,7 +159,7 @@ export default class Document {
                 styles,
                 text: ch,
                 start: i,
-                end: i + 1
+                end: i + 1,
             }
         }
         lines[currentLine].push(currentNode)
@@ -178,10 +170,10 @@ export default class Document {
             let lineLength = 0
             for (let node of nodes) {
                 let start = node.styles
-                    .map(styleName => this.styles[styleName].openTag)
+                    .map((styleName) => this.styles[styleName].openTag)
                     .join('')
                 let end = node.styles
-                    .map(styleName => this.styles[styleName].closeTag)
+                    .map((styleName) => this.styles[styleName].closeTag)
                     .join('')
                 lineText += start + node.text + end
                 if (node.text !== '\n') lineLength += node.text.length

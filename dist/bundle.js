@@ -114,8 +114,6 @@ function () {
 
     _defineProperty(this, "history", []);
 
-    _defineProperty(this, "styles", void 0);
-
     _defineProperty(this, "listeners", {});
   }
 
@@ -1093,6 +1091,8 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
 
 
 var MarkdownDocument =
@@ -1103,9 +1103,19 @@ function (_Document) {
   var _super = _createSuper(MarkdownDocument);
 
   function MarkdownDocument() {
+    var _this;
+
     _classCallCheck(this, MarkdownDocument);
 
-    return _super.apply(this, arguments);
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty(_assertThisInitialized(_this), "text", '*Привет*, **мир**!\n***Сегодня*** __я__ ~~делаю~~ `маркдаун`!');
+
+    return _this;
   }
 
   _createClass(MarkdownDocument, [{
@@ -1142,12 +1152,10 @@ function (_Document) {
     }
   }, {
     key: "styles",
-    // text = '*Привет*, **мир**!\n***Сегодня*** __я__ ~~делаю~~ `маркдаун`!'
     set: function set(value) {},
     get: function get() {
-      var _this = this;
+      var _this2 = this;
 
-      var t = this.text;
       var ranges = {
         bold: [],
         italic: [],
@@ -1158,7 +1166,7 @@ function (_Document) {
       };
 
       var process = function process(styleNames, regexp, n) {
-        _this.text.replace(regexp, function (fullMatch, match, index) {
+        _this2.text.replace(regexp, function (fullMatch, match, index) {
           var start = index + n;
           var end = index + fullMatch.length - n;
           var _iteratorNormalCompletion = true;
@@ -1197,6 +1205,7 @@ function (_Document) {
       process(['underline'], /__(.+?)__/gm, 2);
       process(['strike'], /~~(.+?)~~/gm, 2);
       process(['monospace'], /`([^`]*)`/, 1);
+      console.log(ranges);
       return {
         bold: {
           openTag: '<b>',
