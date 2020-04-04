@@ -6,11 +6,11 @@ import Editable from './editable'
 class BakaEditor extends HTMLElement {
     template = `<div id="wrapper">
         <div id="buttons">
-            <a href="#" id="bold" class="">B</a>
-            <a href="#" id="italic" class="">I</a>
-            <a href="#" id="strike" class="">S</a>
-            <a href="#" id="underline" class="">U</a>
-            <a href="#" id="monospace" class="">M</a>
+            <a href="#" id="bold" tabindex="-1" class="">B</a>
+            <a href="#" id="italic" tabindex="-1" class="">I</a>
+            <a href="#" id="strike" tabindex="-1" class="">S</a>
+            <a href="#" id="underline" tabindex="-1" class="">U</a>
+            <a href="#" id="monospace" tabindex="-1" class="">M</a>
         </div>
         <div id="placeholder">Type: Echo!</div>
         <baka-editable id="editor" />
@@ -20,10 +20,11 @@ class BakaEditor extends HTMLElement {
         placeholder: HTMLElement,
     } = {}
     stylesOverride = {}
-    outputContainer: HTMLElement | void
+    outputContainer: HTMLElement | void | null
+    originalOutputContainer: HTMLElement | void | null
 
     static get observedAttributes() {
-        return ['placeholder', 'output']
+        return ['placeholder', 'output', 'originaloutput']
     }
 
     attributeChangedCallback(name, oldValue, newValue) {
@@ -35,6 +36,11 @@ class BakaEditor extends HTMLElement {
             case 'output':
                 this.outputContainer = document.querySelector(
                     this.getAttribute('output')
+                )
+                break
+            case 'originaloutput':
+                this.originalOutputContainer = document.querySelector(
+                    this.getAttribute('originaloutput')
                 )
                 break
         }
@@ -193,7 +199,8 @@ class BakaEditor extends HTMLElement {
         this.elms.editor.innerHTML = html
         if (this.outputContainer)
             this.outputContainer.value = this.document.getFinalHtml()
-        console.log(this.elms.editor.cursorPos)
+        if (this.originalOutputContainer)
+            this.originalOutputContainer.value = this.document.text
         this.elms.editor.setCursorPos(this.elms.editor.cursorPos)
     }
 
