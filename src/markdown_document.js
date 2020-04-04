@@ -3,7 +3,7 @@
 import Document from './document'
 
 export default class MarkdownDocument extends Document {
-    text = '*Привет*, **мир**!\n***Сегодня*** __я__ ~~делаю~~ `маркдаун`!'
+    // text = '*Привет*, **мир**!\n***Сегодня*** __я__ ~~делаю~~ `маркдаун`!'
 
     set styles(value: any) {}
     get styles() {
@@ -45,7 +45,7 @@ export default class MarkdownDocument extends Document {
         process(['underline'], /__(.+?)__/gm, 2)
         process(['strike'], /~~(.+?)~~/gm, 2)
         process(['monospace'], /`([^`]*)`/, 1)
-        console.log(ranges)
+
         return {
             bold: {
                 openTag: '<b>',

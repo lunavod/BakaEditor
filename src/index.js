@@ -23,12 +23,13 @@ class BakaEditor extends HTMLElement {
     outputContainer: HTMLElement | void
 
     static get observedAttributes() {
-        return ['placeholder']
+        return ['placeholder', 'output']
     }
 
     attributeChangedCallback(name, oldValue, newValue) {
         switch (name) {
             case 'placeholder':
+                if (!this.elms.placeholder) break
                 this.elms.placeholder.innerHTML = newValue
                 break
             case 'output':
