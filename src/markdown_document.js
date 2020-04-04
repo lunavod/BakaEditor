@@ -114,4 +114,9 @@ export default class MarkdownDocument extends Document {
         }
         return styles
     }
+
+    getFinalHtml() {
+        let html = this.toHtml()
+        return html.replace(/<span class="service">(.+?)<\/span>/gm, '')
+    }
 }

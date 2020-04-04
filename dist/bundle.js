@@ -703,7 +703,13 @@ function (_HTMLElement) {
       var n = containerData.n;
       if (!node) return;
       if (node.firstChild) node = node.firstChild;
-      var range = window.getSelection().getRangeAt(0);
+
+      try {
+        var range = window.getSelection().getRangeAt(0);
+      } catch (err) {
+        return;
+      }
+
       range.setEnd(node, offset - n);
       range.setStart(node, offset - n);
       this.cursorPos = offset;
@@ -712,7 +718,13 @@ function (_HTMLElement) {
     key: "getCursorPos",
     value: function getCursorPos() {
       var caretOffset = 0;
-      var range = window.getSelection().getRangeAt(0);
+
+      try {
+        var range = window.getSelection().getRangeAt(0);
+      } catch (err) {
+        return 0;
+      }
+
       var selected = range.toString().length;
       var preCaretRange = range.cloneRange();
       preCaretRange.selectNodeContents(this);
@@ -729,7 +741,23 @@ function (_HTMLElement) {
   }, {
     key: "getSelection",
     value: function getSelection() {
-      var range = window.getSelection().getRangeAt(0);
+      var range;
+
+      try {
+        range = window.getSelection().getRangeAt(0);
+      } catch (err) {
+        return {
+          startOffset: 0,
+          endOffset: 0,
+          startContainer: this,
+          endContainer: this,
+          collapsed: true,
+          toString: function toString() {
+            return '';
+          }
+        };
+      }
+
       var result = {};
       var firstOffset = this.getContainerOffset(range.startContainer);
       var secondOffset = this.getContainerOffset(range.endContainer);
@@ -1149,6 +1177,12 @@ function (_Document) {
       }
 
       return styles;
+    }
+  }, {
+    key: "getFinalHtml",
+    value: function getFinalHtml() {
+      var html = this.toHtml();
+      return html.replace(/<span class="service">(.+?)<\/span>/gm, '');
     }
   }, {
     key: "styles",
