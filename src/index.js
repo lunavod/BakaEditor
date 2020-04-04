@@ -177,6 +177,11 @@ class BakaEditor extends HTMLElement {
         )
     }
 
+    setText(text) {
+        this.elms.editor.cursorPos = 0
+        this.document.setText(text)
+    }
+
     onTextUpdate() {
         if (this.document.text.length) {
             this.elms.placeholder.classList.add('invisible')
@@ -186,8 +191,9 @@ class BakaEditor extends HTMLElement {
 
         const html = this.document.toHtml()
         this.elms.editor.innerHTML = html
-        if (this.outputContainer) this.outputContainer.value = html
-
+        if (this.outputContainer)
+            this.outputContainer.value = this.document.getFinalHtml()
+        console.log(this.elms.editor.cursorPos)
         this.elms.editor.setCursorPos(this.elms.editor.cursorPos)
     }
 

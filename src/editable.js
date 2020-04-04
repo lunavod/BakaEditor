@@ -257,6 +257,7 @@ class Editable extends HTMLElement {
     }
 
     setCursorPos(offset: number): void {
+        if (document.activeElement !== this) return
         let containerData = this.getContainerAtOffset(offset)
         let node = containerData.line
         let n = containerData.n
