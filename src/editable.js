@@ -8,7 +8,7 @@ type CustomSelection = {
     endContainer: Node,
 
     toString: () => string,
-    collapsed: boolean
+    collapsed: boolean,
 }
 
 interface IO {
@@ -173,7 +173,7 @@ class Editable extends HTMLElement {
                 'Home',
                 'End',
                 'PageUp',
-                'PageDown'
+                'PageDown',
             ]
             if (navigationKeys.indexOf(e.key) < 0) return
 
@@ -198,7 +198,7 @@ class Editable extends HTMLElement {
     }
     set cursorPos(val: number): void {
         this.__cursorPos = val
-        this.__cursorPosListeners.forEach(cb => setTimeout(() => cb(val), 1))
+        this.__cursorPosListeners.forEach((cb) => setTimeout(() => cb(val), 1))
     }
 
     addCursorPosListener(cb: (event: mixed) => void): void {
@@ -207,7 +207,7 @@ class Editable extends HTMLElement {
 
     getContainerOffset(container: HTMLElement): number {
         let nodes: Array<any> = Array.from(this.childNodes)
-        while (nodes.filter(node => node.childNodes.length).length) {
+        while (nodes.filter((node) => node.childNodes.length).length) {
             nodes = nodes
                 .map((el: Node) =>
                     el.nodeName === '#text' || el.nodeName === 'BR'
@@ -228,7 +228,7 @@ class Editable extends HTMLElement {
 
     getContainerAtOffset(offset: number): { line: Node, n: number } {
         let nodes: Array<any> = Array.from(this.childNodes)
-        while (nodes.filter(node => node.childNodes.length).length) {
+        while (nodes.filter((node) => node.childNodes.length).length) {
             nodes = nodes
                 .map((el: Node) =>
                     el.nodeName === '#text' || el.nodeName === 'BR'
@@ -265,7 +265,11 @@ class Editable extends HTMLElement {
 
         if (node.firstChild) node = node.firstChild
 
-        var range = window.getSelection().getRangeAt(0)
+        try {
+            var range = window.getSelection().getRangeAt(0)
+        } catch (err) {
+            return
+        }
         range.setEnd(node, offset - n)
         range.setStart(node, offset - n)
         this.cursorPos = offset
@@ -273,7 +277,11 @@ class Editable extends HTMLElement {
 
     getCursorPos(): number {
         var caretOffset = 0
-        var range = window.getSelection().getRangeAt(0)
+        try {
+            var range = window.getSelection().getRangeAt(0)
+        } catch (err) {
+            return 0
+        }
         var selected = range.toString().length
         var preCaretRange = range.cloneRange()
 
@@ -295,7 +303,19 @@ class Editable extends HTMLElement {
     }
 
     getSelection(): CustomSelection {
-        let range = window.getSelection().getRangeAt(0)
+        let range
+        try {
+            range = window.getSelection().getRangeAt(0)
+        } catch (err) {
+            return {
+                startOffset: 0,
+                endOffset: 0,
+                startContainer: this,
+                endContainer: this,
+                collapsed: true,
+                toString: () => '',
+            }
+        }
         let result: CustomSelection = {}
         let firstOffset = this.getContainerOffset(range.startContainer)
         let secondOffset = this.getContainerOffset(range.endContainer)
