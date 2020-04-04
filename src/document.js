@@ -13,10 +13,15 @@ type DeleteEvent = {
     dir: 'back' | 'forward',
 }
 
+type SetTextEvent = {
+    type: 'set text',
+    text: string,
+}
+
 export default class Document {
     //    text = 'aabb\nbbaa'
     text = ''
-    history: Array<InsertEvent | DeleteEvent> = []
+    history: Array<InsertEvent | DeleteEvent | SetTextEvent> = []
 
     beforeDelete(start: number, n: number) {}
     beforeInsert(start: number, text: string) {}
@@ -52,6 +57,13 @@ export default class Document {
             }
         }
         return styles
+    }
+
+    setText(text) {
+        const historyItem: SetTextEvent = { type: 'set text', text }
+        this.history = [historyItem]
+        this.text = text
+        this.fireUpdate(historyItem)
     }
 
     insert(start: number, value: string): void {

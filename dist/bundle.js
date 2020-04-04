@@ -156,6 +156,17 @@ function () {
       return styles;
     }
   }, {
+    key: "setText",
+    value: function setText(text) {
+      var historyItem = {
+        type: 'set text',
+        text: text
+      };
+      this.history = [historyItem];
+      this.text = text;
+      this.fireUpdate(historyItem);
+    }
+  }, {
     key: "insert",
     value: function insert(start, value) {
       var historyItem = {
