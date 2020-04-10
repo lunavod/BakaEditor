@@ -118,7 +118,7 @@ body {
 }
 
 #editor {
-    white-space: pre-line;
+    white-space: pre-wrap;
 }
 
 #editor * {

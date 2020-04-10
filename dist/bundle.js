@@ -565,7 +565,8 @@ function (_HTMLElement) {
       this.addEventListener('paste', function (e) {
         e.preventDefault();
         var clipboardData = e.clipboardData || window.clipboardData;
-        var pastedData = clipboardData.getData('Text');
+        var pastedData = clipboardData.getData('Text').replace(/\r/gm, '');
+        console.log(pastedData, pastedData.length);
         var range = lastSelection && !lastSelection.collapsed ? lastSelection : _this3.getSelection();
         insertText(pastedData, range);
         lastSelection = null;
@@ -1305,7 +1306,7 @@ function (_Document) {
     key: "getFinalHtml",
     value: function getFinalHtml() {
       var html = this.toHtml();
-      html = html.replace(/\n/gm, '<br/>\n');
+      html = html.replace(/\n/gm, '<br/>').replace(/\r/gm, '');
       return html.replace(/<span class="service">(.+?)<\/span>/gm, '');
     }
   }, {

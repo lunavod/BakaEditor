@@ -60,7 +60,8 @@ class Editable extends HTMLElement {
         this.addEventListener('paste', (e: ClipboardEvent): void => {
             e.preventDefault()
             const clipboardData = e.clipboardData || window.clipboardData
-            const pastedData = clipboardData.getData('Text')
+            const pastedData = clipboardData.getData('Text').replace(/\r/gm, '')
+            console.log(pastedData, pastedData.length)
 
             let range =
                 lastSelection && !lastSelection.collapsed

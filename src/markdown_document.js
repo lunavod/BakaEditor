@@ -131,7 +131,7 @@ export default class MarkdownDocument extends Document {
 
     getFinalHtml() {
         let html = this.toHtml()
-        html = html.replace(/\n/gm, '<br/>\n')
+        html = html.replace(/\n/gm, '<br/>').replace(/\r/gm, '')
         return html.replace(/<span class="service">(.+?)<\/span>/gm, '')
     }
 }
