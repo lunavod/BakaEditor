@@ -27,7 +27,7 @@ type SetTextEvent = {
     text: string,
 }
 
-interface IO {
+export interface IO {
     text: string;
 
     history: Array<InsertEvent | DeleteEvent | SetTextEvent | ReplaceEvent>;
@@ -140,7 +140,12 @@ export default class Document {
         this.fireUpdate(historyItem)
     }
 
-    insert(start: number, value: string, save: boolean = true): void {
+    insert(
+        start: number,
+        value: string,
+        save: boolean = true,
+        update: bolean = true
+    ): void {
         const historyItem: InsertEvent = { type: 'insert', value, start }
         if (save) {
             this.history.push(historyItem)
@@ -153,14 +158,15 @@ export default class Document {
         arr.splice(start, 0, value)
         this.text = arr.join('')
 
-        this.fireUpdate(historyItem)
+        if (update) this.fireUpdate(historyItem)
     }
 
     replace(
         start: number,
         end: number,
         value: string,
-        save: boolean = true
+        save: boolean = true,
+        update: boolean = true
     ): void {
         const historyItem: ReplaceEvent = {
             type: 'replace',
@@ -173,16 +179,17 @@ export default class Document {
             this.history.push(historyItem)
             this.historyOffset = -1
         }
-        this.delete(start, end - start, 'back', false)
-        if (value) this.insert(start, value, false)
-        this.fireUpdate(historyItem)
+        this.delete(start, end - start, 'back', false, false)
+        if (value) this.insert(start, value, false, false)
+        if (update) this.fireUpdate(historyItem)
     }
 
     delete(
         start: number,
         n: number,
         dir: 'back' | 'forward' = 'back',
-        save: boolean = true
+        save: boolean = true,
+        update: boolean = true
     ) {
         const historyItem: DeleteEvent = {
             type: 'delete',
@@ -202,7 +209,7 @@ export default class Document {
         arr.splice(start, n)
         this.text = arr.join('')
 
-        this.fireUpdate(historyItem)
+        if (update) this.fireUpdate(historyItem)
     }
 
     listeners: { [string]: Array<(event: mixed) => void> } = {}

@@ -51,12 +51,13 @@ class Editable extends HTMLElement {
                 this.cursorPos = range.startOffset + text.length
                 io.insert(range.startOffset, text)
             } else {
-                this.setCursorPos(range.startOffset + text.length + text.length)
+                this.cursorPos = range.startOffset + text.length
+                // this.setCursorPos(range.startOffset + text.length)
                 io.replace(range.startOffset, range.endOffset, text)
             }
         }
 
-        this.addEventListener('beforepaste', (e: ClipboardEvent): void => {
+        this.addEventListener('paste', (e: ClipboardEvent): void => {
             e.preventDefault()
             const clipboardData = e.clipboardData || window.clipboardData
             const pastedData = clipboardData.getData('Text')
@@ -66,6 +67,7 @@ class Editable extends HTMLElement {
                     ? lastSelection
                     : this.getSelection()
             insertText(pastedData, range)
+            lastSelection = null
         })
 
         this.addEventListener('beforeinput', (e: any): void => {
@@ -212,6 +214,11 @@ class Editable extends HTMLElement {
             if (!e.ctrlKey || e.key !== 'Z' || !e.shiftKey) return
             console.log('redo')
             io.redo()
+        })
+
+        this.addEventListener('keydown', (e: any): void => {
+            if (!e.ctrlKey || e.key !== 'v') return
+            lastSelection = this.getSelection()
         })
 
         this.addEventListener('mouseup', (): void => {
