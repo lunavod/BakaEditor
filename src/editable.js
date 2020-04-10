@@ -1,5 +1,7 @@
 // @flow
 
+import type IO from './document'
+
 type CustomSelection = {
     startOffset: number,
     endOffset: number,
@@ -9,15 +11,6 @@ type CustomSelection = {
 
     toString: () => string,
     collapsed: boolean,
-}
-
-interface IO {
-    delete(start: number, n: number, direction?: string): void;
-    insert(start: number, text: string): void;
-    replace(start: number, end: number, text: string): void;
-    toHtml(): string;
-
-    text: string;
 }
 
 class Editable extends HTMLElement {
@@ -31,21 +24,43 @@ class Editable extends HTMLElement {
 
         this.innerHTML = io.toHtml()
 
+        io.addEventListener('undo', (revertedItem) => {
+            if (revertedItem.type === 'insert') {
+                this.setCursorPos(revertedItem.start)
+            }
+
+            if (revertedItem.type === 'delete') {
+                this.setCursorPos(revertedItem.start + revertedItem.n)
+            }
+        })
+        io.addEventListener('redo', (revertedItem) => {
+            if (revertedItem.type === 'insert') {
+                this.setCursorPos(
+                    revertedItem.start + revertedItem.value.length
+                )
+            }
+
+            if (revertedItem.type === 'delete') {
+                this.setCursorPos(revertedItem.start)
+            }
+        })
+
         const insertText = (text: string, range: CustomSelection): void => {
             console.log(range)
             if (range.collapsed) {
-                this.cursorPos = range.startOffset+text.length
+                this.cursorPos = range.startOffset + text.length
                 io.insert(range.startOffset, text)
             } else {
                 this.setCursorPos(range.startOffset + text.length + text.length)
-                io.replace(range.startOffset + text.length, range.endOffset, text)
+                io.replace(range.startOffset, range.endOffset, text)
             }
         }
 
-        this.addEventListener('paste', (e: ClipboardEvent): void => {
+        this.addEventListener('beforepaste', (e: ClipboardEvent): void => {
             e.preventDefault()
             const clipboardData = e.clipboardData || window.clipboardData
             const pastedData = clipboardData.getData('Text')
+
             let range =
                 lastSelection && !lastSelection.collapsed
                     ? lastSelection
@@ -53,16 +68,17 @@ class Editable extends HTMLElement {
             insertText(pastedData, range)
         })
 
-        this.addEventListener('input', (e: any): void => {
+        this.addEventListener('beforeinput', (e: any): void => {
             if (e.inputType !== 'insertText') return
 
             e.preventDefault()
+            console.log('Last vs new:')
+            console.log(lastSelection, this.getSelection())
 
             let range =
                 lastSelection && !lastSelection.collapsed
                     ? lastSelection
                     : this.getSelection()
-            range.startOffset -= e.data.length
 
             insertText(e.data, range)
         })
@@ -77,13 +93,13 @@ class Editable extends HTMLElement {
             console.log(range.startOffset)
 
             if (range.collapsed) {
-                this.cursorPos = range.startOffset+1
-                this.setCursorPos(range.startOffset+1)
+                this.cursorPos = range.startOffset + 1
+                this.setCursorPos(range.startOffset + 1)
                 io.insert(range.startOffset, '\n')
                 return
             }
 
-            this.cursorPos = range.startOffset+1
+            this.cursorPos = range.startOffset + 1
             io.replace(range.startOffset, range.endOffset, '\n')
         })
 
@@ -184,6 +200,18 @@ class Editable extends HTMLElement {
             if (navigationKeys.indexOf(e.key) < 0) return
 
             this.cursorPos = this.getCursorPos()
+        })
+
+        this.addEventListener('keydown', (e: any): void => {
+            if (!e.ctrlKey || e.key !== 'z' || e.shiftKey) return
+
+            io.undo()
+        })
+
+        this.addEventListener('keydown', (e: any): void => {
+            if (!e.ctrlKey || e.key !== 'Z' || !e.shiftKey) return
+            console.log('redo')
+            io.redo()
         })
 
         this.addEventListener('mouseup', (): void => {

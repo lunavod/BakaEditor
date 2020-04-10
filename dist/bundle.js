@@ -114,10 +114,60 @@ function () {
 
     _defineProperty(this, "history", []);
 
+    _defineProperty(this, "historyOffset", -1);
+
     _defineProperty(this, "listeners", {});
   }
 
   _createClass(Document, [{
+    key: "undo",
+    value: function undo() {
+      if (this.historyOffset === this.history.length - 1) return;
+      this.historyOffset += 1;
+      var item = this.history[this.history.length - this.historyOffset - 1];
+      console.log(this.history, this.historyOffset, item);
+
+      switch (item.type) {
+        case 'insert':
+          this["delete"](item.start, item.value.length, 'back', false);
+          break;
+
+        case 'delete':
+          this.insert(item.start, item.value, false);
+          break;
+
+        case 'replace':
+          this.replace(item.start, item.start + item.from.length, item.from, false);
+          break;
+      }
+
+      this.fireUpdate(item, 'undo');
+    }
+  }, {
+    key: "redo",
+    value: function redo() {
+      if (this.historyOffset === 0) return;
+      this.historyOffset -= 1;
+      var item = this.history[this.history.length - this.historyOffset - 1];
+      console.log(this.history, this.historyOffset, item);
+
+      switch (item.type) {
+        case 'insert':
+          this.insert(item.start, item.value, false);
+          break;
+
+        case 'delete':
+          this["delete"](item.start, item.n, item.dir, false);
+          break;
+
+        case 'replace':
+          this.replace(item.start, item.end, item.value);
+          break;
+      }
+
+      this.fireUpdate(item, 'redo');
+    }
+  }, {
     key: "beforeDelete",
     value: function beforeDelete(start, n) {}
   }, {
@@ -169,12 +219,18 @@ function () {
   }, {
     key: "insert",
     value: function insert(start, value) {
+      var save = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
       var historyItem = {
         type: 'insert',
         value: value,
         start: start
       };
-      this.history.push(historyItem);
+
+      if (save) {
+        this.history.push(historyItem);
+        this.historyOffset = -1;
+      }
+
       this.beforeInsert(start, value);
       var arr = Array.from(this.text);
       arr.splice(start, 0, value);
@@ -184,20 +240,42 @@ function () {
   }, {
     key: "replace",
     value: function replace(start, end, value) {
-      this["delete"](start, end - start);
-      if (value) this.insert(start, value);
+      var save = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : true;
+      var historyItem = {
+        type: 'replace',
+        start: start,
+        end: end,
+        from: this.text.slice(start, end),
+        to: value
+      };
+
+      if (save) {
+        this.history.push(historyItem);
+        this.historyOffset = -1;
+      }
+
+      this["delete"](start, end - start, 'back', false);
+      if (value) this.insert(start, value, false);
+      this.fireUpdate(historyItem);
     }
   }, {
     key: "delete",
     value: function _delete(start, n) {
       var dir = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 'back';
+      var save = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : true;
       var historyItem = {
         type: 'delete',
         n: n,
         start: start,
-        dir: dir
+        dir: dir,
+        value: this.text.slice(start, start + n)
       };
-      this.history.push(historyItem);
+
+      if (save) {
+        this.history.push(historyItem);
+        this.historyOffset = -1;
+      }
+
       this.beforeDelete(start, n);
       var arr = Array.from(this.text);
       arr.splice(start, n);
@@ -216,7 +294,8 @@ function () {
   }, {
     key: "fireUpdate",
     value: function fireUpdate(event) {
-      var callbacks = this.listeners['update'];
+      var type = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'update';
+      var callbacks = this.listeners[type];
       if (!callbacks) return;
       callbacks.forEach(function (callback) {
         return callback(event);
@@ -317,13 +396,16 @@ function () {
 
       for (var _i = 0, _nodes = nodes; _i < _nodes.length; _i++) {
         var node = _nodes[_i];
-        var start = node.styles.map(function (styleName) {
+
+        var _start = node.styles.map(function (styleName) {
           return _this.styles[styleName].openTag;
         }).join('');
-        var end = node.styles.map(function (styleName) {
+
+        var _end = node.styles.map(function (styleName) {
           return _this.styles[styleName].closeTag;
         }).join('');
-        result += start + node.text + end; // if (node.text !== '\n') lineLength += node.text.length
+
+        result += _start + node.text + _end; // if (node.text !== '\n') lineLength += node.text.length
       }
 
       if (result.endsWith('\n')) result += '&#8203;';
@@ -445,6 +527,24 @@ function (_HTMLElement) {
 
       var lastSelection;
       this.innerHTML = io.toHtml();
+      io.addEventListener('undo', function (revertedItem) {
+        if (revertedItem.type === 'insert') {
+          _this3.setCursorPos(revertedItem.start);
+        }
+
+        if (revertedItem.type === 'delete') {
+          _this3.setCursorPos(revertedItem.start + revertedItem.n);
+        }
+      });
+      io.addEventListener('redo', function (revertedItem) {
+        if (revertedItem.type === 'insert') {
+          _this3.setCursorPos(revertedItem.start + revertedItem.value.length);
+        }
+
+        if (revertedItem.type === 'delete') {
+          _this3.setCursorPos(revertedItem.start);
+        }
+      });
 
       var insertText = function insertText(text, range) {
         console.log(range);
@@ -455,22 +555,23 @@ function (_HTMLElement) {
         } else {
           _this3.setCursorPos(range.startOffset + text.length + text.length);
 
-          io.replace(range.startOffset + text.length, range.endOffset, text);
+          io.replace(range.startOffset, range.endOffset, text);
         }
       };
 
-      this.addEventListener('paste', function (e) {
+      this.addEventListener('beforepaste', function (e) {
         e.preventDefault();
         var clipboardData = e.clipboardData || window.clipboardData;
         var pastedData = clipboardData.getData('Text');
         var range = lastSelection && !lastSelection.collapsed ? lastSelection : _this3.getSelection();
         insertText(pastedData, range);
       });
-      this.addEventListener('input', function (e) {
+      this.addEventListener('beforeinput', function (e) {
         if (e.inputType !== 'insertText') return;
         e.preventDefault();
+        console.log('Last vs new:');
+        console.log(lastSelection, _this3.getSelection());
         var range = lastSelection && !lastSelection.collapsed ? lastSelection : _this3.getSelection();
-        range.startOffset -= e.data.length;
         insertText(e.data, range);
       });
       this.addEventListener('beforeinput', function (e) {
@@ -564,6 +665,15 @@ function (_HTMLElement) {
         var navigationKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'];
         if (navigationKeys.indexOf(e.key) < 0) return;
         _this3.cursorPos = _this3.getCursorPos();
+      });
+      this.addEventListener('keydown', function (e) {
+        if (!e.ctrlKey || e.key !== 'z' || e.shiftKey) return;
+        io.undo();
+      });
+      this.addEventListener('keydown', function (e) {
+        if (!e.ctrlKey || e.key !== 'Z' || !e.shiftKey) return;
+        console.log('redo');
+        io.redo();
       });
       this.addEventListener('mouseup', function () {
         var range = window.getSelection().getRangeAt(0);

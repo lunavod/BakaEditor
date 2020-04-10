@@ -10,7 +10,16 @@ type DeleteEvent = {
     type: 'delete',
     start: number,
     n: number,
+    value: string,
     dir: 'back' | 'forward',
+}
+
+type ReplaceEvent = {
+    type: 'replace',
+    start: number,
+    end: number,
+    from: string,
+    to: string,
 }
 
 type SetTextEvent = {
@@ -18,10 +27,75 @@ type SetTextEvent = {
     text: string,
 }
 
+interface IO {
+    text: string;
+
+    history: Array<InsertEvent | DeleteEvent | SetTextEvent | ReplaceEvent>;
+    addEventListener: (
+        event: string,
+        item: InsertEvent | DeleteEvent | SetTextEvent | ReplaceEvent
+    ) => {};
+
+    undo(): void;
+    redo(): void;
+
+    delete(start: number, n: number, direction?: string): void;
+    insert(start: number, text: string): void;
+    replace(start: number, end: number, text: string): void;
+
+    toHtml(): string;
+
+    text: string;
+}
+
 export default class Document {
     //    text = 'aabb\nbbaa\n'
     text = ''
-    history: Array<InsertEvent | DeleteEvent | SetTextEvent> = []
+    history: Array<InsertEvent | DeleteEvent | SetTextEvent | ReplaceEvent> = []
+    historyOffset: number = -1
+
+    undo() {
+        if (this.historyOffset === this.history.length - 1) return
+        this.historyOffset += 1
+        let item = this.history[this.history.length - this.historyOffset - 1]
+        console.log(this.history, this.historyOffset, item)
+        switch (item.type) {
+            case 'insert':
+                this.delete(item.start, item.value.length, 'back', false)
+                break
+            case 'delete':
+                this.insert(item.start, item.value, false)
+                break
+            case 'replace':
+                this.replace(
+                    item.start,
+                    item.start + item.from.length,
+                    item.from,
+                    false
+                )
+                break
+        }
+        this.fireUpdate(item, 'undo')
+    }
+
+    redo() {
+        if (this.historyOffset === 0) return
+        this.historyOffset -= 1
+        let item = this.history[this.history.length - this.historyOffset - 1]
+        console.log(this.history, this.historyOffset, item)
+        switch (item.type) {
+            case 'insert':
+                this.insert(item.start, item.value, false)
+                break
+            case 'delete':
+                this.delete(item.start, item.n, item.dir, false)
+                break
+            case 'replace':
+                this.replace(item.start, item.end, item.value)
+                break
+        }
+        this.fireUpdate(item, 'redo')
+    }
 
     beforeDelete(start: number, n: number) {}
     beforeInsert(start: number, text: string) {}
@@ -66,9 +140,12 @@ export default class Document {
         this.fireUpdate(historyItem)
     }
 
-    insert(start: number, value: string): void {
+    insert(start: number, value: string, save: boolean = true): void {
         const historyItem: InsertEvent = { type: 'insert', value, start }
-        this.history.push(historyItem)
+        if (save) {
+            this.history.push(historyItem)
+            this.historyOffset = -1
+        }
 
         this.beforeInsert(start, value)
 
@@ -79,14 +156,45 @@ export default class Document {
         this.fireUpdate(historyItem)
     }
 
-    replace(start: number, end: number, value: string): void {
-        this.delete(start, end - start)
-        if (value) this.insert(start, value)
+    replace(
+        start: number,
+        end: number,
+        value: string,
+        save: boolean = true
+    ): void {
+        const historyItem: ReplaceEvent = {
+            type: 'replace',
+            start,
+            end,
+            from: this.text.slice(start, end),
+            to: value,
+        }
+        if (save) {
+            this.history.push(historyItem)
+            this.historyOffset = -1
+        }
+        this.delete(start, end - start, 'back', false)
+        if (value) this.insert(start, value, false)
+        this.fireUpdate(historyItem)
     }
 
-    delete(start: number, n: number, dir: 'back' | 'forward' = 'back') {
-        const historyItem: DeleteEvent = { type: 'delete', n, start, dir }
-        this.history.push(historyItem)
+    delete(
+        start: number,
+        n: number,
+        dir: 'back' | 'forward' = 'back',
+        save: boolean = true
+    ) {
+        const historyItem: DeleteEvent = {
+            type: 'delete',
+            n,
+            start,
+            dir,
+            value: this.text.slice(start, start + n),
+        }
+        if (save) {
+            this.history.push(historyItem)
+            this.historyOffset = -1
+        }
 
         this.beforeDelete(start, n)
 
@@ -107,8 +215,8 @@ export default class Document {
         }
     }
 
-    fireUpdate(event: mixed): void {
-        const callbacks = this.listeners['update']
+    fireUpdate(event: mixed, type: string = 'update'): void {
+        const callbacks = this.listeners[type]
         if (!callbacks) return
         callbacks.forEach((callback) => callback(event))
     }

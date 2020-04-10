@@ -21,7 +21,6 @@
         const preview = document.querySelector('#preview')
 
         editor.addEventListener('change', e => {
-            console.log(e)
             pre.innerText = e.detail.html
             preview.innerHTML = e.detail.html
         })
