@@ -16,6 +16,8 @@ class BakaEditor extends HTMLElement {
         <baka-editable id="editor" />
     </div>`
 
+    debug = true
+
     elms: {
         placeholder: HTMLElement,
     } = {}
@@ -195,13 +197,20 @@ class BakaEditor extends HTMLElement {
             this.elms.placeholder.classList.remove('invisible')
         }
 
-        const html = this.document.toHtml()
-        this.elms.editor.innerHTML = html
+        this.elms.editor.innerHTML = this.document.toHtml()
         if (this.outputContainer)
             this.outputContainer.value = this.document.getFinalHtml()
         if (this.originalOutputContainer)
             this.originalOutputContainer.value = this.document.text
         this.elms.editor.setCursorPos(this.elms.editor.cursorPos)
+        this.dispatchEvent(
+            new CustomEvent('change', {
+                detail: {
+                    original: this.document.text,
+                    html: this.document.getFinalHtml(),
+                },
+            })
+        )
     }
 
     initEditor() {

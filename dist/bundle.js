@@ -230,6 +230,7 @@ function () {
       if (!this.text.length) return '<div class="empty">&#8203;</div>';
       var allRanges = [];
       var lines = [[]];
+      var nodes = [];
       var result = '';
 
       for (var styleName in this.styles) {
@@ -289,13 +290,14 @@ function () {
         var ch = this.text[i];
         var styles = getStylesAtOffset(i);
 
-        if (stylesEqual(currentNode.styles, styles) && ch !== '\n') {
+        if (stylesEqual(currentNode.styles, styles) && (ch !== '\n' || currentNode.styles.indexOf('code') >= 0)) {
           currentNode.end = i;
-          currentNode.text += ch;
+          currentNode.text += ch === '\n' ? '<br/>' : ch;
           continue;
         }
 
         lines[currentLine].push(currentNode);
+        nodes.push(currentNode);
 
         if (ch === '\n') {
           currentLine++;
@@ -311,47 +313,20 @@ function () {
       }
 
       lines[currentLine].push(currentNode);
-      var x = 0;
+      nodes.push(currentNode);
 
-      for (var _i = 0, _lines = lines; _i < _lines.length; _i++) {
-        var nodes = _lines[_i];
-        var lineText = '';
-        var lineLength = 0;
-        var _iteratorNormalCompletion2 = true;
-        var _didIteratorError2 = false;
-        var _iteratorError2 = undefined;
-
-        try {
-          for (var _iterator2 = nodes[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-            var node = _step2.value;
-            var start = node.styles.map(function (styleName) {
-              return _this.styles[styleName].openTag;
-            }).join('');
-            var end = node.styles.map(function (styleName) {
-              return _this.styles[styleName].closeTag;
-            }).join('');
-            lineText += start + node.text + end;
-            if (node.text !== '\n') lineLength += node.text.length;
-          }
-        } catch (err) {
-          _didIteratorError2 = true;
-          _iteratorError2 = err;
-        } finally {
-          try {
-            if (!_iteratorNormalCompletion2 && _iterator2["return"] != null) {
-              _iterator2["return"]();
-            }
-          } finally {
-            if (_didIteratorError2) {
-              throw _iteratorError2;
-            }
-          }
-        }
-
-        result += "".concat(x ? '\n' : '', "<div").concat(lineText === '\n' ? ' class="empty"' : '', ">").concat(!lineLength ? '' : lineText.replace(/\n/g, ''), "</div>");
-        x++;
+      for (var _i = 0, _nodes = nodes; _i < _nodes.length; _i++) {
+        var node = _nodes[_i];
+        var start = node.styles.map(function (styleName) {
+          return _this.styles[styleName].openTag;
+        }).join('');
+        var end = node.styles.map(function (styleName) {
+          return _this.styles[styleName].closeTag;
+        }).join('');
+        result += start + node.text + end; // if (node.text !== '\n') lineLength += node.text.length
       }
 
+      if (result.endsWith('\n')) result += '&#8203;';
       return result;
     }
   }]);
@@ -472,13 +447,15 @@ function (_HTMLElement) {
       this.innerHTML = io.toHtml();
 
       var insertText = function insertText(text, range) {
+        console.log(range);
+
         if (range.collapsed) {
           _this3.cursorPos = range.startOffset + text.length;
           io.insert(range.startOffset, text);
         } else {
-          _this3.setCursorPos(range.startOffset + 1 + text.length);
+          _this3.setCursorPos(range.startOffset + text.length + text.length);
 
-          io.replace(range.startOffset + 1, range.endOffset, text);
+          io.replace(range.startOffset + text.length, range.endOffset, text);
         }
       };
 
@@ -496,18 +473,24 @@ function (_HTMLElement) {
         range.startOffset -= e.data.length;
         insertText(e.data, range);
       });
-      this.addEventListener('input', function (e) {
+      this.addEventListener('beforeinput', function (e) {
         if (e.inputType !== 'insertParagraph') return;
+        e.preventDefault();
 
         var range = _this3.getSelection();
 
+        console.log(range.startOffset);
+
         if (range.collapsed) {
-          _this3.cursorPos = range.startOffset;
+          _this3.cursorPos = range.startOffset + 1;
+
+          _this3.setCursorPos(range.startOffset + 1);
+
           io.insert(range.startOffset, '\n');
           return;
         }
 
-        _this3.cursorPos = range.startOffset;
+        _this3.cursorPos = range.startOffset + 1;
         io.replace(range.startOffset, range.endOffset, '\n');
       });
       this.addEventListener('beforeinput', function (e) {
@@ -698,6 +681,7 @@ function (_HTMLElement) {
   }, {
     key: "setCursorPos",
     value: function setCursorPos(offset) {
+      if (document.activeElement !== this) return;
       var containerData = this.getContainerAtOffset(offset);
       var node = containerData.line;
       var n = containerData.n;
@@ -744,7 +728,8 @@ function (_HTMLElement) {
       var range;
 
       try {
-        range = window.getSelection().getRangeAt(0);
+        range = window.getSelection().getRangeAt(0); // console.log('Original range:', range)
+        // return range
       } catch (err) {
         return {
           startOffset: 0,
@@ -760,7 +745,7 @@ function (_HTMLElement) {
 
       var result = {};
       var firstOffset = this.getContainerOffset(range.startContainer);
-      var secondOffset = this.getContainerOffset(range.endContainer);
+      var secondOffset = this.getContainerOffset(range.endContainer); // console.log('Offsets:', firstOffset, secondOffset)
 
       result.toString = function () {
         return range.toString();
@@ -889,13 +874,17 @@ function (_HTMLElement) {
 
     _this = _super.call.apply(_super, [this].concat(args));
 
-    _defineProperty(_assertThisInitialized(_this), "template", "<div id=\"wrapper\">\n        <div id=\"buttons\">\n            <a href=\"#\" id=\"bold\" class=\"\">B</a>\n            <a href=\"#\" id=\"italic\" class=\"\">I</a>\n            <a href=\"#\" id=\"strike\" class=\"\">S</a>\n            <a href=\"#\" id=\"underline\" class=\"\">U</a>\n            <a href=\"#\" id=\"monospace\" class=\"\">M</a>\n        </div>\n        <div id=\"placeholder\">Type: Echo!</div>\n        <baka-editable id=\"editor\" />\n    </div>");
+    _defineProperty(_assertThisInitialized(_this), "template", "<div id=\"wrapper\">\n        <div id=\"buttons\">\n            <a href=\"#\" id=\"bold\" tabindex=\"-1\" class=\"\">B</a>\n            <a href=\"#\" id=\"italic\" tabindex=\"-1\" class=\"\">I</a>\n            <a href=\"#\" id=\"strike\" tabindex=\"-1\" class=\"\">S</a>\n            <a href=\"#\" id=\"underline\" tabindex=\"-1\" class=\"\">U</a>\n            <a href=\"#\" id=\"monospace\" tabindex=\"-1\" class=\"\">M</a>\n        </div>\n        <div id=\"placeholder\">Type: Echo!</div>\n        <baka-editable id=\"editor\" />\n    </div>");
+
+    _defineProperty(_assertThisInitialized(_this), "debug", true);
 
     _defineProperty(_assertThisInitialized(_this), "elms", {});
 
     _defineProperty(_assertThisInitialized(_this), "stylesOverride", {});
 
     _defineProperty(_assertThisInitialized(_this), "outputContainer", void 0);
+
+    _defineProperty(_assertThisInitialized(_this), "originalOutputContainer", void 0);
 
     return _this;
   }
@@ -911,6 +900,10 @@ function (_HTMLElement) {
 
         case 'output':
           this.outputContainer = document.querySelector(this.getAttribute('output'));
+          break;
+
+        case 'originaloutput':
+          this.originalOutputContainer = document.querySelector(this.getAttribute('originaloutput'));
           break;
       }
     }
@@ -1032,6 +1025,12 @@ function (_HTMLElement) {
       console.log('\n%cFired event %s\n%c%s\n%s\n%c%s\n%s%o\n%s%o\n', ['font-weight: bold', 'margin-bottom: 6px'].join(';'), historyEvent.type.toUpperCase(), ['color: rgba(0,0,0,1)', 'padding-bottom: 6px'].join(';'), this.document.text.slice(0, this.elms.editor.cursorPos) + '][' + this.document.text.slice(this.elms.editor.cursorPos, this.document.text.length), this.document.toHtml(), ['color: rgba(0,0,0,.9)', 'line-height: 1.4em'].join(';'), "Document length: ".concat(this.document.text.length, "; Cursor position: ").concat(this.elms.editor.cursorPos), 'Event details:', historyEvent, 'Styles:', this.document.styles);
     }
   }, {
+    key: "setText",
+    value: function setText(text) {
+      this.elms.editor.cursorPos = 0;
+      this.document.setText(text);
+    }
+  }, {
     key: "onTextUpdate",
     value: function onTextUpdate() {
       if (this.document.text.length) {
@@ -1040,10 +1039,16 @@ function (_HTMLElement) {
         this.elms.placeholder.classList.remove('invisible');
       }
 
-      var html = this.document.toHtml();
-      this.elms.editor.innerHTML = html;
-      if (this.outputContainer) this.outputContainer.value = html;
+      this.elms.editor.innerHTML = this.document.toHtml();
+      if (this.outputContainer) this.outputContainer.value = this.document.getFinalHtml();
+      if (this.originalOutputContainer) this.originalOutputContainer.value = this.document.text;
       this.elms.editor.setCursorPos(this.elms.editor.cursorPos);
+      this.dispatchEvent(new CustomEvent('change', {
+        detail: {
+          original: this.document.text,
+          html: this.document.getFinalHtml()
+        }
+      }));
     }
   }, {
     key: "initEditor",
@@ -1059,7 +1064,7 @@ function (_HTMLElement) {
   }], [{
     key: "observedAttributes",
     get: function get() {
-      return ['placeholder', 'output'];
+      return ['placeholder', 'output', 'originaloutput'];
     }
   }]);
 
@@ -1182,11 +1187,14 @@ function (_Document) {
     key: "getFinalHtml",
     value: function getFinalHtml() {
       var html = this.toHtml();
+      html = html.replace(/\n/gm, '<br/>\n');
       return html.replace(/<span class="service">(.+?)<\/span>/gm, '');
     }
   }, {
     key: "styles",
-    // text = '*Привет*, **мир**!\n***Сегодня*** __я__ ~~делаю~~ `маркдаун`!'
+    // text = '```Hello, world!\nIts me, Dio!\n```'
+    // text = '*Привет*, **мир**!\n\n***Сегодня*** __я__ ~~делаю~~ `маркдаун`!'
+    // text = 'as\ndf'
     set: function set(value) {},
     get: function get() {
       var _this = this;
@@ -1197,6 +1205,7 @@ function (_Document) {
         underline: [],
         strike: [],
         monospace: [],
+        code: [],
         service: []
       };
 
@@ -1234,9 +1243,10 @@ function (_Document) {
         });
       };
 
-      process(['bold'], /(?<!\*|\\\*)\*{2,2}[^*\n](.+?)[^*]\*{2,2}(?!\*|\\)/gm, 2);
-      process(['italic'], /((?<!\*|\\)\*[^*\n].+?[^*|\\]\*(?!\*))/gm, 1);
-      process(['bold', 'italic'], /(?<!\*|\\)\*{3,3}[^*\n](.+?)[^*|\\]\*{3,3}(?!\*)/gm, 3);
+      process(['bold'], /(?<!\*|\\\*)\*{2,2}[^*\n]([\s\S]+?)[^*]\*{2,2}(?!\*|\\)/gm, 2);
+      process(['italic'], /((?<!\*|\\)\*[^*\n][\s\S]+?[^*|\\]\*(?!\*))/gm, 1);
+      process(['bold', 'italic'], /(?<!\*|\\)\*{3,3}[^*\n]([\s\S]+?)[^*|\\]\*{3,3}(?!\*)/gm, 3);
+      process(['code'], /(?<!`|\\)`{3,3}[^`]([\s\S]+?)[^`|\\]`{3,3}(?!`)/gm, 3);
       process(['underline'], /__(.+?)__/gm, 2);
       process(['strike'], /~~(.+?)~~/gm, 2);
       process(['monospace'], /`([^`]*)`/, 1);
@@ -1265,6 +1275,11 @@ function (_Document) {
           openTag: '<span class="monospace">',
           closeTag: '</span>',
           ranges: ranges.monospace
+        },
+        code: {
+          openTag: '<span class="code">',
+          closeTag: '</span>',
+          ranges: ranges.code
         },
         service: {
           openTag: '<span class="service">',

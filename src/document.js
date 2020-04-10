@@ -19,7 +19,7 @@ type SetTextEvent = {
 }
 
 export default class Document {
-    //    text = 'aabb\nbbaa'
+    //    text = 'aabb\nbbaa\n'
     text = ''
     history: Array<InsertEvent | DeleteEvent | SetTextEvent> = []
 
@@ -117,6 +117,7 @@ export default class Document {
         if (!this.text.length) return '<div class="empty">&#8203;</div>'
         let allRanges: Array<{ style: string, range: [number, number] }> = []
         let lines = [[]]
+        let nodes = []
         let result = ''
 
         for (let styleName in this.styles) {
@@ -155,13 +156,17 @@ export default class Document {
             let ch = this.text[i]
             let styles = getStylesAtOffset(i)
 
-            if (stylesEqual(currentNode.styles, styles) && ch !== '\n') {
+            if (
+                stylesEqual(currentNode.styles, styles) &&
+                (ch !== '\n' || currentNode.styles.indexOf('code') >= 0)
+            ) {
                 currentNode.end = i
-                currentNode.text += ch
+                currentNode.text += ch === '\n' ? '<br/>' : ch
                 continue
             }
 
             lines[currentLine].push(currentNode)
+            nodes.push(currentNode)
             if (ch === '\n') {
                 currentLine++
                 lines.push([])
@@ -175,26 +180,20 @@ export default class Document {
             }
         }
         lines[currentLine].push(currentNode)
+        nodes.push(currentNode)
 
-        let x = 0
-        for (let nodes of lines) {
-            let lineText = ''
-            let lineLength = 0
-            for (let node of nodes) {
-                let start = node.styles
-                    .map((styleName) => this.styles[styleName].openTag)
-                    .join('')
-                let end = node.styles
-                    .map((styleName) => this.styles[styleName].closeTag)
-                    .join('')
-                lineText += start + node.text + end
-                if (node.text !== '\n') lineLength += node.text.length
-            }
-            result += `${x ? '\n' : ''}<div${
-                lineText === '\n' ? ' class="empty"' : ''
-            }>${!lineLength ? '' : lineText.replace(/\n/g, '')}</div>`
-            x++
+        for (let node of nodes) {
+            let start = node.styles
+                .map((styleName) => this.styles[styleName].openTag)
+                .join('')
+            let end = node.styles
+                .map((styleName) => this.styles[styleName].closeTag)
+                .join('')
+            result += start + node.text + end
+            // if (node.text !== '\n') lineLength += node.text.length
         }
+
+        if (result.endsWith('\n')) result += '&#8203;'
 
         return result
     }

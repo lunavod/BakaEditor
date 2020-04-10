@@ -3,7 +3,10 @@
 import Document from './document'
 
 export default class MarkdownDocument extends Document {
-    // text = '*Привет*, **мир**!\n***Сегодня*** __я__ ~~делаю~~ `маркдаун`!'
+    // text = '```Hello, world!\nIts me, Dio!\n```'
+    // text = '*Привет*, **мир**!\n\n***Сегодня*** __я__ ~~делаю~~ `маркдаун`!'
+
+    // text = 'as\ndf'
 
     set styles(value: any) {}
     get styles() {
@@ -15,6 +18,7 @@ export default class MarkdownDocument extends Document {
             underline: [],
             strike: [],
             monospace: [],
+            code: [],
             service: [],
         }
 
@@ -33,13 +37,18 @@ export default class MarkdownDocument extends Document {
 
         process(
             ['bold'],
-            /(?<!\*|\\\*)\*{2,2}[^*\n](.+?)[^*]\*{2,2}(?!\*|\\)/gm,
+            /(?<!\*|\\\*)\*{2,2}[^*\n]([\s\S]+?)[^*]\*{2,2}(?!\*|\\)/gm,
             2
         )
-        process(['italic'], /((?<!\*|\\)\*[^*\n].+?[^*|\\]\*(?!\*))/gm, 1)
+        process(['italic'], /((?<!\*|\\)\*[^*\n][\s\S]+?[^*|\\]\*(?!\*))/gm, 1)
         process(
             ['bold', 'italic'],
-            /(?<!\*|\\)\*{3,3}[^*\n](.+?)[^*|\\]\*{3,3}(?!\*)/gm,
+            /(?<!\*|\\)\*{3,3}[^*\n]([\s\S]+?)[^*|\\]\*{3,3}(?!\*)/gm,
+            3
+        )
+        process(
+            ['code'],
+            /(?<!`|\\)`{3,3}[^`]([\s\S]+?)[^`|\\]`{3,3}(?!`)/gm,
             3
         )
         process(['underline'], /__(.+?)__/gm, 2)
@@ -71,6 +80,11 @@ export default class MarkdownDocument extends Document {
                 openTag: '<span class="monospace">',
                 closeTag: '</span>',
                 ranges: ranges.monospace,
+            },
+            code: {
+                openTag: '<span class="code">',
+                closeTag: '</span>',
+                ranges: ranges.code,
             },
             service: {
                 openTag: '<span class="service">',
@@ -117,6 +131,7 @@ export default class MarkdownDocument extends Document {
 
     getFinalHtml() {
         let html = this.toHtml()
+        html = html.replace(/\n/gm, '<br/>\n')
         return html.replace(/<span class="service">(.+?)<\/span>/gm, '')
     }
 }

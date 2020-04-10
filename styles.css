@@ -12,7 +12,18 @@ body {
     background: #f7f7ff;
     border: 1px solid #d4d5ff;
     border-radius: 5px;
-    margin-top: 54px;
+    margin: 54px 0;
+    box-sizing: border-box;
+    white-space: pre-line;
+}
+
+#preview {
+    background: white;
+    padding: 12px;
+    border-radius: 15px;
+    width: 700px;
+    min-height: 400px;
+    box-shadow: 0 2px 4px rgba(0,0,0,.2);
     box-sizing: border-box;
 }
 
@@ -106,8 +117,12 @@ body {
     transition: border-color 0.2s;
 }
 
+#editor {
+    white-space: pre-line;
+}
+
 #editor * {
-    white-space: pre;
+    white-space: pre-line;
 }
 
 #editor:focus {
@@ -133,4 +148,8 @@ body {
 
 #editor .service {
     color: #b1b1b1;
+}
+
+#editor .code {
+    color: #53bf6b;
 }

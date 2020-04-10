@@ -32,12 +32,13 @@ class Editable extends HTMLElement {
         this.innerHTML = io.toHtml()
 
         const insertText = (text: string, range: CustomSelection): void => {
+            console.log(range)
             if (range.collapsed) {
-                this.cursorPos = range.startOffset + text.length
+                this.cursorPos = range.startOffset+text.length
                 io.insert(range.startOffset, text)
             } else {
-                this.setCursorPos(range.startOffset + 1 + text.length)
-                io.replace(range.startOffset + 1, range.endOffset, text)
+                this.setCursorPos(range.startOffset + text.length + text.length)
+                io.replace(range.startOffset + text.length, range.endOffset, text)
             }
         }
 
@@ -66,18 +67,23 @@ class Editable extends HTMLElement {
             insertText(e.data, range)
         })
 
-        this.addEventListener('input', (e: any): void => {
+        this.addEventListener('beforeinput', (e: any): void => {
             if (e.inputType !== 'insertParagraph') return
+
+            e.preventDefault()
 
             let range = this.getSelection()
 
+            console.log(range.startOffset)
+
             if (range.collapsed) {
-                this.cursorPos = range.startOffset
+                this.cursorPos = range.startOffset+1
+                this.setCursorPos(range.startOffset+1)
                 io.insert(range.startOffset, '\n')
                 return
             }
 
-            this.cursorPos = range.startOffset
+            this.cursorPos = range.startOffset+1
             io.replace(range.startOffset, range.endOffset, '\n')
         })
 
@@ -307,6 +313,8 @@ class Editable extends HTMLElement {
         let range
         try {
             range = window.getSelection().getRangeAt(0)
+            // console.log('Original range:', range)
+            // return range
         } catch (err) {
             return {
                 startOffset: 0,
@@ -320,6 +328,8 @@ class Editable extends HTMLElement {
         let result: CustomSelection = {}
         let firstOffset = this.getContainerOffset(range.startContainer)
         let secondOffset = this.getContainerOffset(range.endContainer)
+
+        // console.log('Offsets:', firstOffset, secondOffset)
 
         result.toString = () => range.toString()
 

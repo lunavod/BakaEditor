@@ -10,29 +10,20 @@
         <script src="dist/bundle.js"></script>
     </head>
     <body>
-        <!-- <h1 id="title">Baka editor:</h1> -->
-        <input type="hidden" id="hidden_input" />
         <baka-editor output="#hidden_input"></baka-editor>
         <pre id="output_code_preview"></pre>
+        <div id="preview"></div>
     </body>
 
     <script>
-        const input = document.querySelector('#hidden_input')
+        const editor = document.querySelector('baka-editor')
         const pre = document.querySelector('#output_code_preview')
+        const preview = document.querySelector('#preview')
 
-        const config = {
-            attributes: true,
-        }
-
-        const callback = (mutationList, observer) => {
-            for (let mutation of mutationList) {
-                if (mutation.attributeName === 'value') {
-                    pre.innerText = input.value
-                }
-            }
-        }
-
-        const observer = new MutationObserver(callback)
-        observer.observe(input, config)
+        editor.addEventListener('change', e => {
+            console.log(e)
+            pre.innerText = e.detail.html
+            preview.innerHTML = e.detail.html
+        })
     </script>
 </html>
