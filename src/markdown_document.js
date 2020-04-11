@@ -7,6 +7,7 @@ export default class MarkdownDocument extends Document {
     // text = '*Привет*, **мир**!\n\n***Сегодня*** __я__ ~~делаю~~ `маркдаун`!'
 
     // text = 'as\ndf'
+    text = '# Привет!\n## Мир!\nТест'
 
     set styles(value: any) {}
     get styles() {
@@ -18,6 +19,8 @@ export default class MarkdownDocument extends Document {
             underline: [],
             strike: [],
             monospace: [],
+            header_first: [],
+            header_second: [],
             code: [],
             service: [],
         }
@@ -35,25 +38,36 @@ export default class MarkdownDocument extends Document {
             })
         }
 
+        const processLine = (styleNames, regexp, n) => {
+            this.text.replace(regexp, (fullMatch, match, index) => {
+                let start = index
+                let end = index + fullMatch.length
+                for (let styleName of styleNames) {
+                    ranges[styleName].push([start, end])
+                }
+                ranges.service.push([start, start + n])
+                return match
+            })
+        }
+
         process(
             ['bold'],
-            /(?<!\*|\\\*)\*{2,2}[^*\n]([\s\S]+?)[^*]\*{2,2}(?!\*|\\)/gm,
+            /(?<!\*|\\\*)\*{2}[^*\n]([\s\S]+?)[^*]\*{2}(?!\*|\\)/gm,
             2
         )
         process(['italic'], /((?<!\*|\\)\*[^*\n][\s\S]+?[^*|\\]\*(?!\*))/gm, 1)
         process(
             ['bold', 'italic'],
-            /(?<!\*|\\)\*{3,3}[^*\n]([\s\S]+?)[^*|\\]\*{3,3}(?!\*)/gm,
+            /(?<!\*|\\)\*{3}[^*\n]([\s\S]+?)[^*|\\]\*{3}(?!\*)/gm,
             3
         )
-        process(
-            ['code'],
-            /(?<!`|\\)`{3,3}[^`]([\s\S]+?)[^`|\\]`{3,3}(?!`)/gm,
-            3
-        )
+        process(['code'], /(?<!`|\\)`{3}[^`]([\s\S]+?)[^`|\\]`{3}(?!`)/gm, 3)
         process(['underline'], /__(.+?)__/gm, 2)
         process(['strike'], /~~(.+?)~~/gm, 2)
-        process(['monospace'], /`([^`]*)`/, 1)
+        process(['monospace'], /`([^`]*)`/gm, 1)
+
+        processLine(['header_first'], /(?<!#)# ([^\r\n]+)/gm, 2)
+        processLine(['header_second'], /## ([^\r\n]+)/gm, 3)
 
         return {
             bold: {
@@ -85,6 +99,16 @@ export default class MarkdownDocument extends Document {
                 openTag: '<span class="code">',
                 closeTag: '</span>',
                 ranges: ranges.code,
+            },
+            header_first: {
+                openTag: '<h1>',
+                closeTag: '</h1>',
+                ranges: ranges.header_first,
+            },
+            header_second: {
+                openTag: '<h2>',
+                closeTag: '</h2>',
+                ranges: ranges.header_second,
             },
             service: {
                 openTag: '<span class="service">',

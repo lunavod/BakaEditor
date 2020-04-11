@@ -1255,6 +1255,8 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
 
 
 var MarkdownDocument =
@@ -1265,9 +1267,19 @@ function (_Document) {
   var _super = _createSuper(MarkdownDocument);
 
   function MarkdownDocument() {
+    var _this;
+
     _classCallCheck(this, MarkdownDocument);
 
-    return _super.apply(this, arguments);
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty(_assertThisInitialized(_this), "text", '# Привет!\n## Мир!\nТест');
+
+    return _this;
   }
 
   _createClass(MarkdownDocument, [{
@@ -1311,12 +1323,9 @@ function (_Document) {
     }
   }, {
     key: "styles",
-    // text = '```Hello, world!\nIts me, Dio!\n```'
-    // text = '*Привет*, **мир**!\n\n***Сегодня*** __я__ ~~делаю~~ `маркдаун`!'
-    // text = 'as\ndf'
     set: function set(value) {},
     get: function get() {
-      var _this = this;
+      var _this2 = this;
 
       var ranges = {
         bold: [],
@@ -1324,12 +1333,14 @@ function (_Document) {
         underline: [],
         strike: [],
         monospace: [],
+        header_first: [],
+        header_second: [],
         code: [],
         service: []
       };
 
       var process = function process(styleNames, regexp, n) {
-        _this.text.replace(regexp, function (fullMatch, match, index) {
+        _this2.text.replace(regexp, function (fullMatch, match, index) {
           var start = index + n;
           var end = index + fullMatch.length - n;
           var _iteratorNormalCompletion = true;
@@ -1362,13 +1373,48 @@ function (_Document) {
         });
       };
 
-      process(['bold'], /(?<!\*|\\\*)\*{2,2}[^*\n]([\s\S]+?)[^*]\*{2,2}(?!\*|\\)/gm, 2);
+      var processLine = function processLine(styleNames, regexp, n) {
+        _this2.text.replace(regexp, function (fullMatch, match, index) {
+          var start = index;
+          var end = index + fullMatch.length;
+          var _iteratorNormalCompletion2 = true;
+          var _didIteratorError2 = false;
+          var _iteratorError2 = undefined;
+
+          try {
+            for (var _iterator2 = styleNames[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+              var styleName = _step2.value;
+              ranges[styleName].push([start, end]);
+            }
+          } catch (err) {
+            _didIteratorError2 = true;
+            _iteratorError2 = err;
+          } finally {
+            try {
+              if (!_iteratorNormalCompletion2 && _iterator2["return"] != null) {
+                _iterator2["return"]();
+              }
+            } finally {
+              if (_didIteratorError2) {
+                throw _iteratorError2;
+              }
+            }
+          }
+
+          ranges.service.push([start, start + n]);
+          return match;
+        });
+      };
+
+      process(['bold'], /(?<!\*|\\\*)\*{2}[^*\n]([\s\S]+?)[^*]\*{2}(?!\*|\\)/gm, 2);
       process(['italic'], /((?<!\*|\\)\*[^*\n][\s\S]+?[^*|\\]\*(?!\*))/gm, 1);
-      process(['bold', 'italic'], /(?<!\*|\\)\*{3,3}[^*\n]([\s\S]+?)[^*|\\]\*{3,3}(?!\*)/gm, 3);
-      process(['code'], /(?<!`|\\)`{3,3}[^`]([\s\S]+?)[^`|\\]`{3,3}(?!`)/gm, 3);
+      process(['bold', 'italic'], /(?<!\*|\\)\*{3}[^*\n]([\s\S]+?)[^*|\\]\*{3}(?!\*)/gm, 3);
+      process(['code'], /(?<!`|\\)`{3}[^`]([\s\S]+?)[^`|\\]`{3}(?!`)/gm, 3);
       process(['underline'], /__(.+?)__/gm, 2);
       process(['strike'], /~~(.+?)~~/gm, 2);
-      process(['monospace'], /`([^`]*)`/, 1);
+      process(['monospace'], /`([^`]*)`/gm, 1);
+      processLine(['header_first'], /(?<!#)# ([^\r\n]+)/gm, 2);
+      processLine(['header_second'], /## ([^\r\n]+)/gm, 3);
       return {
         bold: {
           openTag: '<b>',
@@ -1399,6 +1445,16 @@ function (_Document) {
           openTag: '<span class="code">',
           closeTag: '</span>',
           ranges: ranges.code
+        },
+        header_first: {
+          openTag: '<h1>',
+          closeTag: '</h1>',
+          ranges: ranges.header_first
+        },
+        header_second: {
+          openTag: '<h2>',
+          closeTag: '</h2>',
+          ranges: ranges.header_second
         },
         service: {
           openTag: '<span class="service">',

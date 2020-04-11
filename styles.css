@@ -27,6 +27,12 @@ body {
     box-sizing: border-box;
 }
 
+#preview h1, #preview h2 {
+    white-space: pre-wrap;
+    display: inline-block;
+    margin: 16px 0 8px 0;
+}
+
 :root {
     --button-size: 32px;
     --editor-padding: 6px;
@@ -152,4 +158,10 @@ body {
 
 #editor .code {
     color: #53bf6b;
+}
+
+#editor h1, #editor h2 {
+    white-space: pre-wrap;
+    display: inline;
+    margin: 16px 0 8px 0;
 }
