@@ -1,13 +1,54 @@
 body {
     background: #5672ff05;
     font-family: 'IBM Plex Sans', sans-serif;
-    padding: 120px;
+    /*padding: 120px;*/
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+
+:root {
+    --button-size: 32px;
+    --editor-padding: 12px;
+    --border-radius: 5px;
+}
+
+.wrapper {
+    display: flex;
+    justify-content: stretch;
+    width: 100%;
+    max-width: 1432px;
+    box-shadow: rgba(0, 0, 255, 0.24) 0px 5px 24px;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+}
+
+baka-editor {
+    width: calc((100% - 32px) / 2 + 32px);
+}
+
+#preview {
+    background: #d4d5ff00;
+    border-left: 1px solid rgba(0, 0, 255, 0.12);
+    padding: var(--editor-padding);
+    width: calc((100% - 32px) / 2);
+    min-height: 400px;
+    box-sizing: border-box;
+}
+
+#preview h1, #preview h2 {
+    white-space: pre-wrap;
+    /*display: inline;*/
+    margin: 16px 0 8px 0;
 }
 
 #output_code_preview {
     padding: 6px;
     font-size: 1em;
-    width: 700px;
+    width: 100%;
+    max-width: 1432px;
     min-height: calc(1.3em + 12px);
     background: #f7f7ff;
     border: 1px solid #d4d5ff;
@@ -17,33 +58,10 @@ body {
     white-space: pre-line;
 }
 
-#preview {
-    background: white;
-    padding: 12px;
-    border-radius: 15px;
-    width: 700px;
-    min-height: 400px;
-    box-shadow: 0 2px 4px rgba(0,0,0,.2);
-    box-sizing: border-box;
-}
-
-#preview h1, #preview h2 {
-    white-space: pre-wrap;
-    display: inline-block;
-    margin: 16px 0 8px 0;
-}
-
-:root {
-    --button-size: 32px;
-    --editor-padding: 6px;
-    --border-radius: 5px;
-}
-
 #wrapper {
-    width: 700px;
+    width: 100%;
+    height: 100%;
     background: white;
-    box-shadow: rgba(0, 0, 255, 0.24) 0px 5px 24px;
-    border-radius: var(--border-radius);
     display: flex;
     align-items: stretch;
     overflow: hidden;
@@ -118,7 +136,7 @@ body {
     padding: calc(var(--editor-padding) - 1px);
     background: transparent;
     z-index: 1;
-    border-radius: 0px var(--border-radius) var(--border-radius) 0;
+    /*border-radius: 0px var(--border-radius) var(--border-radius) 0;*/
     border: 1px solid transparent;
     transition: border-color 0.2s;
 }
@@ -127,9 +145,9 @@ body {
     white-space: pre-wrap;
 }
 
-#editor * {
-    white-space: pre-line;
-}
+/*#editor * {*/
+/*    white-space: pre-line;*/
+/*}*/
 
 #editor:focus {
     outline: 0px solid transparent;
@@ -164,4 +182,11 @@ body {
     white-space: pre-wrap;
     display: inline;
     margin: 16px 0 8px 0;
+}
+
+#editor blockquote {
+    display: inline;
+    margin: 0;
+    padding: 0;
+    color: #419eff;
 }

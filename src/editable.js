@@ -313,6 +313,7 @@ class Editable extends HTMLElement {
         } catch (err) {
             return
         }
+        console.log(offset - n, offset, n)
         range.setEnd(node, offset - n)
         range.setStart(node, offset - n)
         this.cursorPos = offset

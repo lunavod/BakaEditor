@@ -27,6 +27,13 @@ type SetTextEvent = {
     text: string,
 }
 
+type MyNode = {
+    styles: string[],
+    text: string,
+    start: number,
+    end: number,
+}
+
 export interface IO {
     text: string;
 
@@ -232,7 +239,7 @@ export default class Document {
         if (!this.text.length) return '<div class="empty">&#8203;</div>'
         let allRanges: Array<{ style: string, range: [number, number] }> = []
         let lines = [[]]
-        let nodes = []
+        let nodes: Array<MyNode> = []
         let result = ''
 
         for (let styleName in this.styles) {
@@ -255,12 +262,12 @@ export default class Document {
             return !a.filter((el) => b.indexOf(el) < 0).length
         }
 
-        let currentNode: {
-            styles: string[],
-            text: string,
-            start: number,
-            end: number,
-        } = {
+        const findDiff = (a: string[], b: string[]) => {
+            let [first, second] = a.length >= b.length ? [a, b] : [b, a]
+            return first.filter((el) => second.indexOf(el) < 0)
+        }
+
+        let currentNode: MyNode = {
             styles: getStylesAtOffset(0),
             text: this.text[0],
             start: 0,
@@ -271,10 +278,7 @@ export default class Document {
             let ch = this.text[i]
             let styles = getStylesAtOffset(i)
 
-            if (
-                stylesEqual(currentNode.styles, styles) &&
-                (ch !== '\n' || currentNode.styles.indexOf('code') >= 0)
-            ) {
+            if (stylesEqual(currentNode.styles, styles)) {
                 currentNode.end = i
                 currentNode.text += ch === '\n' ? '<br/>' : ch
                 continue
@@ -297,18 +301,52 @@ export default class Document {
         lines[currentLine].push(currentNode)
         nodes.push(currentNode)
 
-        for (let node of nodes) {
-            let start = node.styles
-                .map((styleName) => this.styles[styleName].openTag)
-                .join('')
-            let end = node.styles
-                .map((styleName) => this.styles[styleName].closeTag)
-                .join('')
-            result += start + node.text + end
-            // if (node.text !== '\n') lineLength += node.text.length
+        const subtractArray = (x, y) => {
+            return x.filter((el) => y.indexOf(el) < 0)
         }
 
-        if (result.endsWith('\n')) result += '&#8203;'
+        const reversed = (arr) => {
+            let myArr = [...arr]
+            myArr.reverse()
+            return myArr
+        }
+
+        let activeStyles = new Set()
+        for (let node of nodes) {
+            const diff = subtractArray([...activeStyles], node.styles)
+            const minIndex = diff.reduce((accumulator, styleName) => {
+                const index = [...activeStyles].indexOf(styleName)
+                if (index < accumulator) return index
+            }, activeStyles.size)
+            const stylesToClose = reversed(
+                [...activeStyles].slice(minIndex, activeStyles.size)
+            )
+            stylesToClose.forEach((styleName) => activeStyles.delete(styleName))
+
+            const stylesToOpen = subtractArray(node.styles, [...activeStyles])
+            stylesToOpen.forEach((styleName) => activeStyles.add(styleName))
+
+            let start = stylesToOpen
+                .map((styleName) => this.styles[styleName].openTag)
+                .join('')
+            let prevEnd = stylesToClose
+                .map((styleName) => this.styles[styleName].closeTag)
+                .join('')
+            result += prevEnd + start + node.text
+        }
+
+        result += reversed([...activeStyles])
+            .map((styleName) => this.styles[styleName].closeTag)
+            .join('')
+
+        if (result.endsWith('\n') || result.endsWith('<br/>'))
+            result += '&#8203;'
+
+        result = result
+            .replace(/<br\/><\//gm, '<br/>&#8203;<')
+            .replace(/<\/h1><br\/>/gm, '</h1>')
+            .replace(/<\/h2><br\/>/gm, '</h2>')
+            .replace(/\r/gm, '')
 
         return result
     }

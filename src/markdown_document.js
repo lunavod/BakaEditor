@@ -7,7 +7,8 @@ export default class MarkdownDocument extends Document {
     // text = '*Привет*, **мир**!\n\n***Сегодня*** __я__ ~~делаю~~ `маркдаун`!'
 
     // text = 'as\ndf'
-    text = '# Привет!\n## Мир!\nТест'
+    // text = '> Привет!\n> Мир!\nТест'
+    // text = `*hello ~~world~~*`
 
     set styles(value: any) {}
     get styles() {
@@ -22,6 +23,7 @@ export default class MarkdownDocument extends Document {
             header_first: [],
             header_second: [],
             code: [],
+            quote: [],
             service: [],
         }
 
@@ -38,7 +40,7 @@ export default class MarkdownDocument extends Document {
             })
         }
 
-        const processLine = (styleNames, regexp, n) => {
+        const processOneLine = (styleNames, regexp, n) => {
             this.text.replace(regexp, (fullMatch, match, index) => {
                 let start = index
                 let end = index + fullMatch.length
@@ -47,6 +49,28 @@ export default class MarkdownDocument extends Document {
                 }
                 ranges.service.push([start, start + n])
                 return match
+            })
+        }
+
+        const processGroup = (styleNames, regexp, n) => {
+            this.text.replace(regexp, (fullMatch, match, index) => {
+                let start = index
+                let end = index + fullMatch.length
+                for (let styleName of styleNames) {
+                    let prevIndex = ranges[styleName].findIndex(
+                        (el) => el[1] + 1 === start
+                    )
+                    if (prevIndex < 0) {
+                        ranges[styleName].push([start, end])
+                        ranges.service.push([start, start + n])
+                        continue
+                    }
+                    ranges[styleName].splice(prevIndex, 1, [
+                        ranges[styleName][prevIndex][0],
+                        end,
+                    ])
+                }
+                ranges.service.push([start, start + n])
             })
         }
 
@@ -61,13 +85,18 @@ export default class MarkdownDocument extends Document {
             /(?<!\*|\\)\*{3}[^*\n]([\s\S]+?)[^*|\\]\*{3}(?!\*)/gm,
             3
         )
-        process(['code'], /(?<!`|\\)`{3}[^`]([\s\S]+?)[^`|\\]`{3}(?!`)/gm, 3)
+
         process(['underline'], /__(.+?)__/gm, 2)
         process(['strike'], /~~(.+?)~~/gm, 2)
-        process(['monospace'], /`([^`]*)`/gm, 1)
 
-        processLine(['header_first'], /(?<!#)# ([^\r\n]+)/gm, 2)
-        processLine(['header_second'], /## ([^\r\n]+)/gm, 3)
+        process(['code'], /```([^`]+?)```/gm, 3)
+        process(['quote'], /(?<!`|\\)``([^`]+?)``/gm, 2)
+        process(['monospace'], /(?<!`|\\)`([^`\n\r]+?)`/gm, 1)
+
+        processOneLine(['header_first'], /(?<!#)# ([^\r\n]+)/gm, 2)
+        processOneLine(['header_second'], /## ([^\r\n]+)/gm, 3)
+
+        // processGroup(['quote'], /> ([^\n\r]+)/gm, 2)
 
         return {
             bold: {
@@ -109,6 +138,11 @@ export default class MarkdownDocument extends Document {
                 openTag: '<h2>',
                 closeTag: '</h2>',
                 ranges: ranges.header_second,
+            },
+            quote: {
+                openTag: '<blockquote>',
+                closeTag: '</blockquote>',
+                ranges: ranges.quote,
             },
             service: {
                 openTag: '<span class="service">',
@@ -155,7 +189,7 @@ export default class MarkdownDocument extends Document {
 
     getFinalHtml() {
         let html = this.toHtml()
-        html = html.replace(/\n/gm, '<br/>').replace(/\r/gm, '')
+        html = html.replace(/\n/gm, '').replace(/\r/gm, '')
         return html.replace(/<span class="service">(.+?)<\/span>/gm, '')
     }
 }

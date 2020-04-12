@@ -10,9 +10,11 @@
         <script src="dist/bundle.js"></script>
     </head>
     <body>
-        <baka-editor output="#hidden_input"></baka-editor>
+        <div class="wrapper">
+            <baka-editor output="#hidden_input" debug></baka-editor>
+            <div id="preview"></div>
+        </div>
         <pre id="output_code_preview"></pre>
-        <div id="preview"></div>
     </body>
 
     <script>
@@ -24,5 +26,7 @@
             pre.innerText = e.detail.html
             preview.innerHTML = e.detail.html
         })
+
+        editor.setText(`# Hello!\nI am just a little *rich* editor. __BakaEditor__. :3`)
     </script>
 </html>

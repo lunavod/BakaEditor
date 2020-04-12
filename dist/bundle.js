@@ -96,6 +96,22 @@
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "default", function() { return Document; });
+function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _nonIterableSpread(); }
+
+function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance"); }
+
+function _iterableToArray(iter) { if (Symbol.iterator in Object(iter) || Object.prototype.toString.call(iter) === "[object Arguments]") return Array.from(iter); }
+
+function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } }
+
+function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
+
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
+
+function _iterableToArrayLimit(arr, i) { if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) { return; } var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
+
+function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
@@ -360,6 +376,17 @@ function () {
         }).length;
       };
 
+      var findDiff = function findDiff(a, b) {
+        var _ref = a.length >= b.length ? [a, b] : [b, a],
+            _ref2 = _slicedToArray(_ref, 2),
+            first = _ref2[0],
+            second = _ref2[1];
+
+        return first.filter(function (el) {
+          return second.indexOf(el) < 0;
+        });
+      };
+
       var currentNode = {
         styles: getStylesAtOffset(0),
         text: this.text[0],
@@ -372,7 +399,7 @@ function () {
         var ch = this.text[i];
         var styles = getStylesAtOffset(i);
 
-        if (stylesEqual(currentNode.styles, styles) && (ch !== '\n' || currentNode.styles.indexOf('code') >= 0)) {
+        if (stylesEqual(currentNode.styles, styles)) {
           currentNode.end = i;
           currentNode.text += ch === '\n' ? '<br/>' : ch;
           continue;
@@ -397,21 +424,53 @@ function () {
       lines[currentLine].push(currentNode);
       nodes.push(currentNode);
 
-      for (var _i = 0, _nodes = nodes; _i < _nodes.length; _i++) {
-        var node = _nodes[_i];
+      var subtractArray = function subtractArray(x, y) {
+        return x.filter(function (el) {
+          return y.indexOf(el) < 0;
+        });
+      };
 
-        var _start = node.styles.map(function (styleName) {
+      var reversed = function reversed(arr) {
+        var myArr = _toConsumableArray(arr);
+
+        myArr.reverse();
+        return myArr;
+      };
+
+      var activeStyles = new Set();
+
+      for (var _i2 = 0, _nodes = nodes; _i2 < _nodes.length; _i2++) {
+        var node = _nodes[_i2];
+        var diff = subtractArray(_toConsumableArray(activeStyles), node.styles);
+        var minIndex = diff.reduce(function (accumulator, styleName) {
+          var index = _toConsumableArray(activeStyles).indexOf(styleName);
+
+          if (index < accumulator) return index;
+        }, activeStyles.size);
+        var stylesToClose = reversed(_toConsumableArray(activeStyles).slice(minIndex, activeStyles.size));
+        stylesToClose.forEach(function (styleName) {
+          return activeStyles["delete"](styleName);
+        });
+        var stylesToOpen = subtractArray(node.styles, _toConsumableArray(activeStyles));
+        stylesToOpen.forEach(function (styleName) {
+          return activeStyles.add(styleName);
+        });
+
+        var _start = stylesToOpen.map(function (styleName) {
           return _this.styles[styleName].openTag;
         }).join('');
 
-        var _end = node.styles.map(function (styleName) {
+        var prevEnd = stylesToClose.map(function (styleName) {
           return _this.styles[styleName].closeTag;
         }).join('');
-
-        result += _start + node.text + _end; // if (node.text !== '\n') lineLength += node.text.length
+        result += prevEnd + _start + node.text;
       }
 
-      if (result.endsWith('\n')) result += '&#8203;';
+      result += reversed(_toConsumableArray(activeStyles)).map(function (styleName) {
+        return _this.styles[styleName].closeTag;
+      }).join('');
+      if (result.endsWith('\n') || result.endsWith('<br/>')) result += '&#8203;';
+      result = result.replace(/<br\/><\//gm, '<br/>&#8203;<').replace(/<\/h1><br\/>/gm, '</h1>').replace(/<\/h2><br\/>/gm, '</h2>').replace(/\r/gm, '');
       return result;
     }
   }]);
@@ -813,6 +872,7 @@ function (_HTMLElement) {
         return;
       }
 
+      console.log(offset - n, offset, n);
       range.setEnd(node, offset - n);
       range.setStart(node, offset - n);
       this.cursorPos = offset;
@@ -995,7 +1055,7 @@ function (_HTMLElement) {
 
     _defineProperty(_assertThisInitialized(_this), "template", "<div id=\"wrapper\">\n        <div id=\"buttons\">\n            <a href=\"#\" id=\"bold\" tabindex=\"-1\" class=\"\">B</a>\n            <a href=\"#\" id=\"italic\" tabindex=\"-1\" class=\"\">I</a>\n            <a href=\"#\" id=\"strike\" tabindex=\"-1\" class=\"\">S</a>\n            <a href=\"#\" id=\"underline\" tabindex=\"-1\" class=\"\">U</a>\n            <a href=\"#\" id=\"monospace\" tabindex=\"-1\" class=\"\">M</a>\n        </div>\n        <div id=\"placeholder\">Type: Echo!</div>\n        <baka-editable id=\"editor\" />\n    </div>");
 
-    _defineProperty(_assertThisInitialized(_this), "debug", true);
+    _defineProperty(_assertThisInitialized(_this), "debug", false);
 
     _defineProperty(_assertThisInitialized(_this), "elms", {});
 
@@ -1012,6 +1072,9 @@ function (_HTMLElement) {
     key: "attributeChangedCallback",
     value: function attributeChangedCallback(name, oldValue, newValue) {
       switch (name) {
+        case 'debug':
+          this.debug = this.getAttribute('debug') !== null;
+
         case 'placeholder':
           if (!this.elms.placeholder) break;
           this.elms.placeholder.innerHTML = newValue;
@@ -1030,6 +1093,7 @@ function (_HTMLElement) {
     key: "connectedCallback",
     value: function connectedCallback() {
       this.innerHTML = this.template;
+      this.debug = this.getAttribute('debug') !== null;
       this.outputContainer = document.querySelector(this.getAttribute('output'));
       this.elms.wrapper = this.querySelector('#wrapper');
       this.elms.editor = this.querySelector('#editor');
@@ -1183,7 +1247,7 @@ function (_HTMLElement) {
   }], [{
     key: "observedAttributes",
     get: function get() {
-      return ['placeholder', 'output', 'originaloutput'];
+      return ['placeholder', 'output', 'originaloutput', 'debug'];
     }
   }]);
 
@@ -1255,8 +1319,6 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
-function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
-
 
 
 var MarkdownDocument =
@@ -1267,19 +1329,9 @@ function (_Document) {
   var _super = _createSuper(MarkdownDocument);
 
   function MarkdownDocument() {
-    var _this;
-
     _classCallCheck(this, MarkdownDocument);
 
-    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-      args[_key] = arguments[_key];
-    }
-
-    _this = _super.call.apply(_super, [this].concat(args));
-
-    _defineProperty(_assertThisInitialized(_this), "text", '# Привет!\n## Мир!\nТест');
-
-    return _this;
+    return _super.apply(this, arguments);
   }
 
   _createClass(MarkdownDocument, [{
@@ -1318,14 +1370,19 @@ function (_Document) {
     key: "getFinalHtml",
     value: function getFinalHtml() {
       var html = this.toHtml();
-      html = html.replace(/\n/gm, '<br/>').replace(/\r/gm, '');
+      html = html.replace(/\n/gm, '').replace(/\r/gm, '');
       return html.replace(/<span class="service">(.+?)<\/span>/gm, '');
     }
   }, {
     key: "styles",
+    // text = '```Hello, world!\nIts me, Dio!\n```'
+    // text = '*Привет*, **мир**!\n\n***Сегодня*** __я__ ~~делаю~~ `маркдаун`!'
+    // text = 'as\ndf'
+    // text = '> Привет!\n> Мир!\nТест'
+    // text = `*hello ~~world~~*`
     set: function set(value) {},
     get: function get() {
-      var _this2 = this;
+      var _this = this;
 
       var ranges = {
         bold: [],
@@ -1336,11 +1393,12 @@ function (_Document) {
         header_first: [],
         header_second: [],
         code: [],
+        quote: [],
         service: []
       };
 
       var process = function process(styleNames, regexp, n) {
-        _this2.text.replace(regexp, function (fullMatch, match, index) {
+        _this.text.replace(regexp, function (fullMatch, match, index) {
           var start = index + n;
           var end = index + fullMatch.length - n;
           var _iteratorNormalCompletion = true;
@@ -1373,8 +1431,8 @@ function (_Document) {
         });
       };
 
-      var processLine = function processLine(styleNames, regexp, n) {
-        _this2.text.replace(regexp, function (fullMatch, match, index) {
+      var processOneLine = function processOneLine(styleNames, regexp, n) {
+        _this.text.replace(regexp, function (fullMatch, match, index) {
           var start = index;
           var end = index + fullMatch.length;
           var _iteratorNormalCompletion2 = true;
@@ -1406,15 +1464,59 @@ function (_Document) {
         });
       };
 
+      var processGroup = function processGroup(styleNames, regexp, n) {
+        _this.text.replace(regexp, function (fullMatch, match, index) {
+          var start = index;
+          var end = index + fullMatch.length;
+          var _iteratorNormalCompletion3 = true;
+          var _didIteratorError3 = false;
+          var _iteratorError3 = undefined;
+
+          try {
+            for (var _iterator3 = styleNames[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+              var styleName = _step3.value;
+              var prevIndex = ranges[styleName].findIndex(function (el) {
+                return el[1] + 1 === start;
+              });
+
+              if (prevIndex < 0) {
+                ranges[styleName].push([start, end]);
+                ranges.service.push([start, start + n]);
+                continue;
+              }
+
+              ranges[styleName].splice(prevIndex, 1, [ranges[styleName][prevIndex][0], end]);
+            }
+          } catch (err) {
+            _didIteratorError3 = true;
+            _iteratorError3 = err;
+          } finally {
+            try {
+              if (!_iteratorNormalCompletion3 && _iterator3["return"] != null) {
+                _iterator3["return"]();
+              }
+            } finally {
+              if (_didIteratorError3) {
+                throw _iteratorError3;
+              }
+            }
+          }
+
+          ranges.service.push([start, start + n]);
+        });
+      };
+
       process(['bold'], /(?<!\*|\\\*)\*{2}[^*\n]([\s\S]+?)[^*]\*{2}(?!\*|\\)/gm, 2);
       process(['italic'], /((?<!\*|\\)\*[^*\n][\s\S]+?[^*|\\]\*(?!\*))/gm, 1);
       process(['bold', 'italic'], /(?<!\*|\\)\*{3}[^*\n]([\s\S]+?)[^*|\\]\*{3}(?!\*)/gm, 3);
-      process(['code'], /(?<!`|\\)`{3}[^`]([\s\S]+?)[^`|\\]`{3}(?!`)/gm, 3);
       process(['underline'], /__(.+?)__/gm, 2);
       process(['strike'], /~~(.+?)~~/gm, 2);
-      process(['monospace'], /`([^`]*)`/gm, 1);
-      processLine(['header_first'], /(?<!#)# ([^\r\n]+)/gm, 2);
-      processLine(['header_second'], /## ([^\r\n]+)/gm, 3);
+      process(['code'], /```([^`]+?)```/gm, 3);
+      process(['quote'], /(?<!`|\\)``([^`]+?)``/gm, 2);
+      process(['monospace'], /(?<!`|\\)`([^`\n\r]+?)`/gm, 1);
+      processOneLine(['header_first'], /(?<!#)# ([^\r\n]+)/gm, 2);
+      processOneLine(['header_second'], /## ([^\r\n]+)/gm, 3); // processGroup(['quote'], /> ([^\n\r]+)/gm, 2)
+
       return {
         bold: {
           openTag: '<b>',
@@ -1455,6 +1557,11 @@ function (_Document) {
           openTag: '<h2>',
           closeTag: '</h2>',
           ranges: ranges.header_second
+        },
+        quote: {
+          openTag: '<blockquote>',
+          closeTag: '</blockquote>',
+          ranges: ranges.quote
         },
         service: {
           openTag: '<span class="service">',

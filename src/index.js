@@ -16,7 +16,7 @@ class BakaEditor extends HTMLElement {
         <baka-editable id="editor" />
     </div>`
 
-    debug = true
+    debug = false
 
     elms: {
         placeholder: HTMLElement,
@@ -26,11 +26,13 @@ class BakaEditor extends HTMLElement {
     originalOutputContainer: HTMLElement | void | null
 
     static get observedAttributes() {
-        return ['placeholder', 'output', 'originaloutput']
+        return ['placeholder', 'output', 'originaloutput', 'debug']
     }
 
     attributeChangedCallback(name, oldValue, newValue) {
         switch (name) {
+            case 'debug':
+                this.debug = this.getAttribute('debug') !== null
             case 'placeholder':
                 if (!this.elms.placeholder) break
                 this.elms.placeholder.innerHTML = newValue
@@ -50,6 +52,8 @@ class BakaEditor extends HTMLElement {
 
     connectedCallback() {
         this.innerHTML = this.template
+
+        this.debug = this.getAttribute('debug') !== null
 
         this.outputContainer = document.querySelector(
             this.getAttribute('output')
