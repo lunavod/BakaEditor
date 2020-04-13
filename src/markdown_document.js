@@ -25,6 +25,8 @@ export default class MarkdownDocument extends Document {
             code: [],
             quote: [],
             service: [],
+            link: [],
+            link_title: [],
         }
 
         const process = (styleNames, regexp, n) => {
@@ -73,6 +75,31 @@ export default class MarkdownDocument extends Document {
                 ranges.service.push([start, start + n])
             })
         }
+
+        const processLinks = () => {
+            this.text.replace(
+                /\[([^\n\r]*?)\]\(([^\n\r]+?)\)/gm,
+                (fullMatch, title, link, index) => {
+                    ranges['service'].push([index, index + 1])
+                    ranges['service'].push([
+                        index + 1 + title.length,
+                        index + 1 + title.length + 1,
+                    ])
+                    ranges['link_title'].push([
+                        index + 1,
+                        index + 1 + title.length,
+                    ])
+
+                    let linkStart = index + 1 + title.length + 2
+                    let linkEnd = linkStart + link.length
+                    ranges['service'].push([linkStart - 1, linkStart])
+                    ranges['service'].push([linkEnd, linkEnd + 1])
+                    ranges['link'].push([linkStart, linkEnd])
+                }
+            )
+        }
+
+        processLinks(['link'], /\[[^\n\r]*?\]\(([^\n\r]+?)\)/gm)
 
         process(
             ['bold'],
@@ -144,6 +171,16 @@ export default class MarkdownDocument extends Document {
                 closeTag: '</blockquote>',
                 ranges: ranges.quote,
             },
+            link: {
+                openTag: '<baka-link>',
+                closeTag: '</baka-link>',
+                ranges: ranges.link,
+            },
+            link_title: {
+                openTag: '<span class="service_link_title">',
+                closeTag: '</span>',
+                ranges: ranges.link_title,
+            },
             service: {
                 openTag: '<span class="service">',
                 closeTag: '</span>',
@@ -188,8 +225,27 @@ export default class MarkdownDocument extends Document {
     }
 
     getFinalHtml() {
+        const titles = []
+        this.text.replace(
+            /\[([^\n\r]*?)\]\(([^\n\r]+?)\)/gm,
+            (full, title, link) => {
+                console.log(title, link)
+                titles.push(title ? title : link)
+            }
+        )
+
         let html = this.toHtml()
+
+        let linkCounter = -1
+        html = html.replace(/<baka-link>(.+)<\/baka-link>/gm, (full, link) => {
+            linkCounter++
+            return `<a href="${link}" target="_blank">${titles[linkCounter]}</a>`
+        })
+
         html = html.replace(/\n/gm, '').replace(/\r/gm, '')
-        return html.replace(/<span class="service">(.+?)<\/span>/gm, '')
+        return html.replace(
+            /<span class=["']service[_]*.*?["']>(.+?)<\/span>/gm,
+            ''
+        )
     }
 }

@@ -27,9 +27,13 @@ body {
 
 baka-editor {
     width: calc((100% - 32px) / 2 + 32px);
+    max-height: 900px;
+    overflow: auto;
 }
 
 #preview {
+    max-height: 900px;
+    overflow: auto;
     background: #d4d5ff00;
     border-left: 1px solid rgba(0, 0, 255, 0.12);
     padding: var(--editor-padding);
@@ -189,4 +193,8 @@ baka-editor {
     margin: 0;
     padding: 0;
     color: #419eff;
+}
+
+#editor .service_link_title {
+    color: violet;
 }

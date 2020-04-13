@@ -2,6 +2,7 @@
 
 import Document from './markdown_document'
 import Editable from './editable'
+import BakaLink from './baka_link'
 
 class BakaEditor extends HTMLElement {
     template = `<div id="wrapper">

@@ -11,10 +11,10 @@
     </head>
     <body>
         <div class="wrapper">
-            <baka-editor output="#hidden_input" debug></baka-editor>
+            <baka-editor debug></baka-editor>
             <div id="preview"></div>
         </div>
-        <pre id="output_code_preview"></pre>
+        <pre id="output_code_preview" />
     </body>
 
     <script>
@@ -27,6 +27,7 @@
             preview.innerHTML = e.detail.html
         })
 
-        editor.setText(`# Hello!\nI am just a little *rich* editor. __BakaEditor__. :3`)
+        // editor.setText(`# Hello!\nI am just a little *rich* editor. __BakaEditor__. :3`)
+        editor.setText(`[asdf](http://example.com)`)
     </script>
 </html>
