@@ -198,3 +198,7 @@ baka-editor {
 #editor .service_link_title {
     color: violet;
 }
+
+#editor .service_image_title {
+    color: darkorange;
+}

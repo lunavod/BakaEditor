@@ -26,6 +26,8 @@ export default class MarkdownDocument extends Document {
             quote: [],
             service: [],
             link: [],
+            image: [],
+            image_title: [],
             link_title: [],
         }
 
@@ -78,7 +80,7 @@ export default class MarkdownDocument extends Document {
 
         const processLinks = () => {
             this.text.replace(
-                /\[([^\n\r]*?)\]\(([^\n\r]+?)\)/gm,
+                /(?<!!)\[([^\n\r]*?)\]\(([^\n\r]+?)\)/gm,
                 (fullMatch, title, link, index) => {
                     ranges['service'].push([index, index + 1])
                     ranges['service'].push([
@@ -99,7 +101,31 @@ export default class MarkdownDocument extends Document {
             )
         }
 
-        processLinks(['link'], /\[[^\n\r]*?\]\(([^\n\r]+?)\)/gm)
+        const processImages = () => {
+            this.text.replace(
+                /\!\[([^\n\r]*?)\]\(([^\n\r]+?)\)/gm,
+                (fullMatch, title, link, index) => {
+                    ranges['service'].push([index, index + 2])
+                    ranges['service'].push([
+                        index + 2 + title.length,
+                        index + 2 + title.length + 1,
+                    ])
+                    ranges['image_title'].push([
+                        index + 2,
+                        index + 2 + title.length,
+                    ])
+
+                    let linkStart = index + 2 + title.length + 2
+                    let linkEnd = linkStart + link.length
+                    ranges['service'].push([linkStart - 1, linkStart])
+                    ranges['service'].push([linkEnd, linkEnd + 1])
+                    ranges['image'].push([linkStart, linkEnd])
+                }
+            )
+        }
+
+        processLinks()
+        processImages()
 
         process(
             ['bold'],
@@ -172,7 +198,7 @@ export default class MarkdownDocument extends Document {
                 ranges: ranges.quote,
             },
             link: {
-                openTag: '<baka-link>',
+                openTag: '<baka-link class="link">',
                 closeTag: '</baka-link>',
                 ranges: ranges.link,
             },
@@ -180,6 +206,16 @@ export default class MarkdownDocument extends Document {
                 openTag: '<span class="service_link_title">',
                 closeTag: '</span>',
                 ranges: ranges.link_title,
+            },
+            image: {
+                openTag: '<baka-link class="image_link">',
+                closeTag: '</baka-link>',
+                ranges: ranges.image,
+            },
+            image_title: {
+                openTag: '<span class="service_image_title">',
+                closeTag: '</span>',
+                ranges: ranges.image_title,
             },
             service: {
                 openTag: '<span class="service">',
@@ -225,22 +261,45 @@ export default class MarkdownDocument extends Document {
     }
 
     getFinalHtml() {
-        const titles = []
+        const link_titles = []
         this.text.replace(
-            /\[([^\n\r]*?)\]\(([^\n\r]+?)\)/gm,
+            /(?<!!)\[([^\n\r]*?)\]\(([^\n\r]+?)\)/gm,
             (full, title, link) => {
                 console.log(title, link)
-                titles.push(title ? title : link)
+                link_titles.push(title ? title : link)
+            }
+        )
+
+        const image_titles = []
+        this.text.replace(
+            /!\[([^\n\r]*?)\]\(([^\n\r]+?)\)/gm,
+            (full, title, link) => {
+                console.log(title, link)
+                image_titles.push(title ? title : '')
             }
         )
 
         let html = this.toHtml()
 
         let linkCounter = -1
-        html = html.replace(/<baka-link>(.+)<\/baka-link>/gm, (full, link) => {
-            linkCounter++
-            return `<a href="${link}" target="_blank">${titles[linkCounter]}</a>`
-        })
+        html = html.replace(
+            /<baka-link class="link">(.+)<\/baka-link>/gm,
+            (full, link) => {
+                console.log(full, link)
+                linkCounter++
+                return `<a href="${link}" target="_blank">${link_titles[linkCounter]}</a>`
+            }
+        )
+
+        let imageCounter = -1
+        html = html.replace(
+            /<baka-link class="image_link">(.+)<\/baka-link>/gm,
+            (full, link) => {
+                console.log(full, link)
+                linkCounter++
+                return `<img src="${link}" title="${image_titles[linkCounter]}" />`
+            }
+        )
 
         html = html.replace(/\n/gm, '').replace(/\r/gm, '')
         return html.replace(

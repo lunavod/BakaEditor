@@ -1487,16 +1487,28 @@ function (_Document) {
   }, {
     key: "getFinalHtml",
     value: function getFinalHtml() {
-      var titles = [];
-      this.text.replace(/\[([^\n\r]*?)\]\(([^\n\r]+?)\)/gm, function (full, title, link) {
+      var link_titles = [];
+      this.text.replace(/(?<!!)\[([^\n\r]*?)\]\(([^\n\r]+?)\)/gm, function (full, title, link) {
         console.log(title, link);
-        titles.push(title ? title : link);
+        link_titles.push(title ? title : link);
+      });
+      var image_titles = [];
+      this.text.replace(/!\[([^\n\r]*?)\]\(([^\n\r]+?)\)/gm, function (full, title, link) {
+        console.log(title, link);
+        image_titles.push(title ? title : '');
       });
       var html = this.toHtml();
       var linkCounter = -1;
-      html = html.replace(/<baka-link>(.+)<\/baka-link>/gm, function (full, link) {
+      html = html.replace(/<baka-link class="link">(.+)<\/baka-link>/gm, function (full, link) {
+        console.log(full, link);
         linkCounter++;
-        return "<a href=\"".concat(link, "\" target=\"_blank\">").concat(titles[linkCounter], "</a>");
+        return "<a href=\"".concat(link, "\" target=\"_blank\">").concat(link_titles[linkCounter], "</a>");
+      });
+      var imageCounter = -1;
+      html = html.replace(/<baka-link class="image_link">(.+)<\/baka-link>/gm, function (full, link) {
+        console.log(full, link);
+        linkCounter++;
+        return "<img src=\"".concat(link, "\" title=\"").concat(image_titles[linkCounter], "\" />");
       });
       html = html.replace(/\n/gm, '').replace(/\r/gm, '');
       return html.replace(/<span class=["']service[_]*.*?["']>(.+?)<\/span>/gm, '');
@@ -1524,6 +1536,8 @@ function (_Document) {
         quote: [],
         service: [],
         link: [],
+        image: [],
+        image_title: [],
         link_title: []
       };
 
@@ -1637,7 +1651,7 @@ function (_Document) {
       };
 
       var processLinks = function processLinks() {
-        _this.text.replace(/\[([^\n\r]*?)\]\(([^\n\r]+?)\)/gm, function (fullMatch, title, link, index) {
+        _this.text.replace(/(?<!!)\[([^\n\r]*?)\]\(([^\n\r]+?)\)/gm, function (fullMatch, title, link, index) {
           ranges['service'].push([index, index + 1]);
           ranges['service'].push([index + 1 + title.length, index + 1 + title.length + 1]);
           ranges['link_title'].push([index + 1, index + 1 + title.length]);
@@ -1649,7 +1663,21 @@ function (_Document) {
         });
       };
 
-      processLinks(['link'], /\[[^\n\r]*?\]\(([^\n\r]+?)\)/gm);
+      var processImages = function processImages() {
+        _this.text.replace(/\!\[([^\n\r]*?)\]\(([^\n\r]+?)\)/gm, function (fullMatch, title, link, index) {
+          ranges['service'].push([index, index + 2]);
+          ranges['service'].push([index + 2 + title.length, index + 2 + title.length + 1]);
+          ranges['image_title'].push([index + 2, index + 2 + title.length]);
+          var linkStart = index + 2 + title.length + 2;
+          var linkEnd = linkStart + link.length;
+          ranges['service'].push([linkStart - 1, linkStart]);
+          ranges['service'].push([linkEnd, linkEnd + 1]);
+          ranges['image'].push([linkStart, linkEnd]);
+        });
+      };
+
+      processLinks();
+      processImages();
       process(['bold'], /(?<!\*|\\\*)\*{2}[^*\n]([\s\S]+?)[^*]\*{2}(?!\*|\\)/gm, 2);
       process(['italic'], /((?<!\*|\\)\*[^*\n][\s\S]+?[^*|\\]\*(?!\*))/gm, 1);
       process(['bold', 'italic'], /(?<!\*|\\)\*{3}[^*\n]([\s\S]+?)[^*|\\]\*{3}(?!\*)/gm, 3);
@@ -1708,7 +1736,7 @@ function (_Document) {
           ranges: ranges.quote
         },
         link: {
-          openTag: '<baka-link>',
+          openTag: '<baka-link class="link">',
           closeTag: '</baka-link>',
           ranges: ranges.link
         },
@@ -1716,6 +1744,16 @@ function (_Document) {
           openTag: '<span class="service_link_title">',
           closeTag: '</span>',
           ranges: ranges.link_title
+        },
+        image: {
+          openTag: '<baka-link class="image_link">',
+          closeTag: '</baka-link>',
+          ranges: ranges.image
+        },
+        image_title: {
+          openTag: '<span class="service_image_title">',
+          closeTag: '</span>',
+          ranges: ranges.image_title
         },
         service: {
           openTag: '<span class="service">',
