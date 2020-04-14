@@ -80,7 +80,7 @@ export default class MarkdownDocument extends Document {
 
         const processLinks = () => {
             this.text.replace(
-                /(?<!!)\[([^\n\r]*?)\]\(([^\n\r]+?)\)/gm,
+                /(?<!!)\[([^\n\r\[\]\\]*?)\]\(([^\n\r]+?)\)/gm,
                 (fullMatch, title, link, index) => {
                     ranges['service'].push([index, index + 1])
                     ranges['service'].push([
@@ -103,7 +103,7 @@ export default class MarkdownDocument extends Document {
 
         const processImages = () => {
             this.text.replace(
-                /\!\[([^\n\r]*?)\]\(([^\n\r]+?)\)/gm,
+                /\!\[([^\n\r\]\[\\]*?)\]\(([^\n\r]+?)\)/gm,
                 (fullMatch, title, link, index) => {
                     ranges['service'].push([index, index + 2])
                     ranges['service'].push([
@@ -126,6 +126,12 @@ export default class MarkdownDocument extends Document {
 
         processLinks()
         processImages()
+
+        process(
+            ['link'],
+            /(?<!\]\()(https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)/gm,
+            0
+        )
 
         process(
             ['bold'],
@@ -225,6 +231,55 @@ export default class MarkdownDocument extends Document {
         }
     }
 
+    mark(styleName: string, range: [number, number]): number {
+        let before: string = '',
+            start: string = '',
+            end: string = ''
+        if (range[0] > 0 && this.text[range[0] - 1] !== '\n') before = '\n'
+        switch (styleName) {
+            case 'bold':
+                start = '**'
+                end = '**'
+                break
+            case 'italic':
+                start = '*'
+                end = '*'
+                break
+            case 'underline':
+                start = '__'
+                end = '__'
+                break
+            case 'strike':
+                start = '~~'
+                end = '~~'
+                break
+            case 'monospace':
+                start = '`'
+                end = '`'
+                break
+            case 'quote':
+                start = before + '``\n'
+                end = '\n``\n'
+                break
+            case 'code':
+                start = before + '```\n'
+                end = '\n```\n'
+                break
+            case 'header_first':
+                start = before + '# '
+                end = '\n'
+                break
+            case 'header_second':
+                start = before + '## '
+                end = '\n'
+                break
+        }
+
+        this.insert(range[0], start)
+        this.insert(range[1] + start.length, end)
+        return range[1] + start.length
+    }
+
     getStylesAtOffset(offset: number) {
         let styles: {
             [string]: [number, number],
@@ -261,33 +316,38 @@ export default class MarkdownDocument extends Document {
     }
 
     getFinalHtml() {
+        let html = this.toHtml()
+
+        html = html.replace(
+            /(?<!<span class="service">\]\(<\/span>)<baka-link class="link">(.+)<\/baka-link>/gm,
+            (fullMatch, link) => `<a href="${link}" target="_blank">${link}</a>`
+        )
+
         const link_titles = []
         this.text.replace(
-            /(?<!!)\[([^\n\r]*?)\]\(([^\n\r]+?)\)/gm,
+            /(?<!!)\[([^\n\r\]\[]*?)\]\(([^\n\r\(\)]+?)\)/gm,
             (full, title, link) => {
                 console.log(title, link)
                 link_titles.push(title ? title : link)
             }
         )
 
-        const image_titles = []
-        this.text.replace(
-            /!\[([^\n\r]*?)\]\(([^\n\r]+?)\)/gm,
-            (full, title, link) => {
-                console.log(title, link)
-                image_titles.push(title ? title : '')
-            }
-        )
-
-        let html = this.toHtml()
-
         let linkCounter = -1
         html = html.replace(
-            /<baka-link class="link">(.+)<\/baka-link>/gm,
+            /<baka-link class="link">(.+?)<\/baka-link>/gm,
             (full, link) => {
                 console.log(full, link)
                 linkCounter++
                 return `<a href="${link}" target="_blank">${link_titles[linkCounter]}</a>`
+            }
+        )
+
+        const image_titles = []
+        this.text.replace(
+            /!\[([^\n\r\[\]]*?)\]\(([^\n\r\(\)]+?)\)/gm,
+            (full, title, link) => {
+                console.log(title, link)
+                image_titles.push(title ? title : '')
             }
         )
 
@@ -296,12 +356,22 @@ export default class MarkdownDocument extends Document {
             /<baka-link class="image_link">(.+)<\/baka-link>/gm,
             (full, link) => {
                 console.log(full, link)
-                linkCounter++
-                return `<img src="${link}" title="${image_titles[linkCounter]}" />`
+                imageCounter++
+                return `<img src="${link}" title="${image_titles[imageCounter]}" />`
             }
         )
 
-        html = html.replace(/\n/gm, '').replace(/\r/gm, '')
+        html = html.replace(/\\\*/gm, '*')
+        html = html.replace(/\\`/gm, '`')
+        html = html.replace(/\\_/gm, '_')
+        html = html.replace(/\\#/gm, '#')
+        html = html.replace(/\\~/gm, '~')
+
+        html = html
+            .replace(/\n/gm, '<br/>')
+            .replace(/\r/gm, '')
+            .replace(/<\/h1><br\/>/gm, '</h1>')
+            .replace(/<\/h2><br\/>/gm, '</h2>')
         return html.replace(
             /<span class=["']service[_]*.*?["']>(.+?)<\/span>/gm,
             ''

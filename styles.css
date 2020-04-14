@@ -8,7 +8,6 @@ body {
     justify-content: center;
 }
 
-
 :root {
     --button-size: 32px;
     --editor-padding: 12px;
@@ -42,7 +41,8 @@ baka-editor {
     box-sizing: border-box;
 }
 
-#preview h1, #preview h2 {
+#preview h1,
+#preview h2 {
     white-space: pre-wrap;
     /*display: inline;*/
     margin: 16px 0 8px 0;
@@ -91,12 +91,17 @@ baka-editor {
     font-size: 1.2em;
     color: rgba(0, 0, 255, 0.3);
     transition: color 0.2s;
+    position: relative;
 }
 
 #buttons a.active {
     /* background: rgba(0, 0, 255, 0.08); */
     color: #ffd324;
     /* background: #ffd324; */
+}
+
+#buttons a img {
+    height: 0.9em;
 }
 
 #buttons #bold {
@@ -116,14 +121,50 @@ baka-editor {
 }
 
 #buttons #monospace {
-    font-family: monospace;
+    font-family: Monospace, monospace;
+    font-size: 1.4em;
+}
+
+#buttons #code,
+#buttons #header_first,
+#buttons #header_second {
+    font-size: 0.9em;
+}
+
+#buttons .delimiter {
+    height: 16px;
+}
+
+#buttons .popup {
+    display: none;
+    position: absolute;
+    bottom: 0;
+    left: calc(100% + 8px);
+    padding: 6px;
+    border: 1px solid #ddddff;
+    background: #f7f7ff;
+    z-index: 2000;
+    cursor: default;
+}
+
+#buttons .active .popup {
+    display: block;
+}
+
+#buttons .popup .url {
+    margin-bottom: 6px;
+}
+
+#buttons .popup input {
+    padding: 4px;
+    font-size: 14px;
 }
 
 #placeholder {
     position: absolute;
     width: 100%;
     height: auto;
-    top: 6px;
+    top: var(--editor-padding);
     left: calc(var(--editor-padding) + 1px + var(--button-size));
     opacity: 0.6;
     z-index: 0;
@@ -182,7 +223,8 @@ baka-editor {
     color: #53bf6b;
 }
 
-#editor h1, #editor h2 {
+#editor h1,
+#editor h2 {
     white-space: pre-wrap;
     display: inline;
     margin: 16px 0 8px 0;

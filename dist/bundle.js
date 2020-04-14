@@ -212,6 +212,7 @@ customElements.define('baka-link', BakaLink);
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "default", function() { return Document; });
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./utils */ "./src/utils.js");
 function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _nonIterableSpread(); }
 
 function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance"); }
@@ -220,14 +221,6 @@ function _iterableToArray(iter) { if (Symbol.iterator in Object(iter) || Object.
 
 function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } }
 
-function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
-
-function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
-
-function _iterableToArrayLimit(arr, i) { if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) { return; } var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
-
-function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
-
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
@@ -235,6 +228,8 @@ function _defineProperties(target, props) { for (var i = 0; i < props.length; i+
 function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+
 
 var Document =
 /*#__PURE__*/
@@ -306,15 +301,18 @@ function () {
     key: "beforeInsert",
     value: function beforeInsert(start, text) {}
   }, {
+    key: "mark",
+    value: function mark(styleName, range) {}
+  }, {
     key: "getStylesAtOffset",
     value: function getStylesAtOffset(offset) {
       var styles = {};
 
-      for (var styleName in this.styles) {
-        for (var i = 0; i < this.styles[styleName].ranges.length; i++) {
-          var range = this.styles[styleName].ranges[i];
-          if (!(range[0] < offset && range[1] >= offset)) continue;
-          styles[styleName] = range;
+      for (var _styleName in this.styles) {
+        for (var i = 0; i < this.styles[_styleName].ranges.length; i++) {
+          var _range = this.styles[_styleName].ranges[i];
+          if (!(_range[0] < offset && _range[1] >= offset)) continue;
+          styles[_styleName] = _range;
         }
       }
 
@@ -325,13 +323,13 @@ function () {
     value: function getStylesAtRange(start, end) {
       var styles = [];
 
-      for (var styleName in this.styles) {
-        for (var i = 0; i < this.styles[styleName].ranges.length; i++) {
-          var range = this.styles[styleName].ranges[i];
-          if (!(range[0] >= start && range[0] < end || // Начало в выделении
-          range[1] > start && range[1] <= end || // Конец в выделении
-          range[0] <= start && range[1] >= end)) continue;
-          styles.push(styleName);
+      for (var _styleName2 in this.styles) {
+        for (var i = 0; i < this.styles[_styleName2].ranges.length; i++) {
+          var _range2 = this.styles[_styleName2].ranges[i];
+          if (!(_range2[0] >= start && _range2[0] < end || // Начало в выделении
+          _range2[1] > start && _range2[1] <= end || // Конец в выделении
+          _range2[0] <= start && _range2[1] >= end)) continue;
+          styles.push(_styleName2);
         }
       }
 
@@ -441,23 +439,23 @@ function () {
     value: function toHtml() {
       var _this = this;
 
-      if (!this.text.length) return '<div class="empty">&#8203;</div>';
+      if (!this.text.length) return '';
       var allRanges = [];
       var lines = [[]];
       var nodes = [];
       var result = '';
 
-      for (var styleName in this.styles) {
+      for (var _styleName3 in this.styles) {
         var _iteratorNormalCompletion = true;
         var _didIteratorError = false;
         var _iteratorError = undefined;
 
         try {
-          for (var _iterator = this.styles[styleName].ranges[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-            var range = _step.value;
+          for (var _iterator = this.styles[_styleName3].ranges[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+            var _range3 = _step.value;
             allRanges.push({
-              style: styleName,
-              range: range
+              style: _styleName3,
+              range: _range3
             });
           }
         } catch (err) {
@@ -492,17 +490,6 @@ function () {
         }).length;
       };
 
-      var findDiff = function findDiff(a, b) {
-        var _ref = a.length >= b.length ? [a, b] : [b, a],
-            _ref2 = _slicedToArray(_ref, 2),
-            first = _ref2[0],
-            second = _ref2[1];
-
-        return first.filter(function (el) {
-          return second.indexOf(el) < 0;
-        });
-      };
-
       var currentNode = {
         styles: getStylesAtOffset(0),
         text: this.text[0],
@@ -517,7 +504,7 @@ function () {
 
         if (stylesEqual(currentNode.styles, styles)) {
           currentNode.end = i;
-          currentNode.text += ch === '\n' ? '<br/>' : ch;
+          currentNode.text += ch;
           continue;
         }
 
@@ -555,8 +542,8 @@ function () {
 
       var activeStyles = new Set();
 
-      for (var _i2 = 0, _nodes = nodes; _i2 < _nodes.length; _i2++) {
-        var node = _nodes[_i2];
+      for (var _i = 0, _nodes = nodes; _i < _nodes.length; _i++) {
+        var node = _nodes[_i];
         var diff = subtractArray(_toConsumableArray(activeStyles), node.styles);
         var minIndex = diff.reduce(function (accumulator, styleName) {
           var index = _toConsumableArray(activeStyles).indexOf(styleName);
@@ -579,14 +566,14 @@ function () {
         var prevEnd = stylesToClose.map(function (styleName) {
           return _this.styles[styleName].closeTag;
         }).join('');
-        result += prevEnd + _start + node.text;
+        result += prevEnd + _start + Object(_utils__WEBPACK_IMPORTED_MODULE_0__["escapeHtml"])(node.text);
       }
 
       result += reversed(_toConsumableArray(activeStyles)).map(function (styleName) {
         return _this.styles[styleName].closeTag;
       }).join('');
       if (result.endsWith('\n') || result.endsWith('<br/>')) result += '&#8203;';
-      result = result.replace(/<br\/><\//gm, '<br/>&#8203;<').replace(/<\/h1><br\/>/gm, '</h1>').replace(/<\/h2><br\/>/gm, '</h2>').replace(/\r/gm, '');
+      result = result.replace(/\r/gm, '');
       return result;
     }
   }]);
@@ -870,13 +857,8 @@ function (_HTMLElement) {
       });
     }
   }, {
-    key: "addCursorPosListener",
-    value: function addCursorPosListener(cb) {
-      this.__cursorPosListeners.push(cb);
-    }
-  }, {
-    key: "getContainerOffset",
-    value: function getContainerOffset(container) {
+    key: "getFlatNodes",
+    value: function getFlatNodes() {
       var nodes = Array.from(this.childNodes);
 
       while (nodes.filter(function (node) {
@@ -887,6 +869,12 @@ function (_HTMLElement) {
         }).flat(Infinity);
       }
 
+      return nodes;
+    }
+  }, {
+    key: "getContainerOffset",
+    value: function getContainerOffset(container) {
+      var nodes = this.getFlatNodes();
       var offset = 0;
       var _iteratorNormalCompletion = true;
       var _didIteratorError = false;
@@ -918,16 +906,7 @@ function (_HTMLElement) {
   }, {
     key: "getContainerAtOffset",
     value: function getContainerAtOffset(offset) {
-      var nodes = Array.from(this.childNodes);
-
-      while (nodes.filter(function (node) {
-        return node.childNodes.length;
-      }).length) {
-        nodes = nodes.map(function (el) {
-          return el.nodeName === '#text' || el.nodeName === 'BR' ? [el] : Array.from(el.childNodes);
-        }).flat(Infinity);
-      }
-
+      var nodes = this.getFlatNodes();
       var lastNode = undefined;
       var x = 0;
       var _iteratorNormalCompletion2 = true;
@@ -938,7 +917,7 @@ function (_HTMLElement) {
         for (var _iterator2 = nodes[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
           var node = _step2.value;
 
-          if (node.nodeName == 'BR') {
+          if (node.nodeName === 'BR') {
             x += 1;
             continue;
           }
@@ -1171,13 +1150,11 @@ function (_HTMLElement) {
 
     _this = _super.call.apply(_super, [this].concat(args));
 
-    _defineProperty(_assertThisInitialized(_this), "template", "<div id=\"wrapper\">\n        <div id=\"buttons\">\n            <a href=\"#\" id=\"bold\" tabindex=\"-1\" class=\"\">B</a>\n            <a href=\"#\" id=\"italic\" tabindex=\"-1\" class=\"\">I</a>\n            <a href=\"#\" id=\"strike\" tabindex=\"-1\" class=\"\">S</a>\n            <a href=\"#\" id=\"underline\" tabindex=\"-1\" class=\"\">U</a>\n            <a href=\"#\" id=\"monospace\" tabindex=\"-1\" class=\"\">M</a>\n        </div>\n        <div id=\"placeholder\">Type: Echo!</div>\n        <baka-editable id=\"editor\" />\n    </div>");
+    _defineProperty(_assertThisInitialized(_this), "template", "<div id=\"wrapper\">\n        <div id=\"buttons\">\n            <a href=\"#\" id=\"bold\" tabindex=\"-1\">B</a>\n            <a href=\"#\" id=\"italic\" tabindex=\"-1\">I</a>\n            <a href=\"#\" id=\"strike\" tabindex=\"-1\">S</a>\n            <a href=\"#\" id=\"underline\" tabindex=\"-1\">U</a>\n            <a href=\"#\" id=\"monospace\" tabindex=\"-1\">M</a>\n            <a href=\"#\" id=\"quote\" tabindex=\"-1\">&laquo;&raquo;</a>\n            <a href=\"#\" id=\"code\" tabindex=\"-1\">&lt;/&gt;</a>\n            <a href=\"#\" id=\"header_first\" tabindex=\"-1\">H1</a>\n            <a href=\"#\" id=\"header_second\" tabindex=\"-1\">H2</a>\n            <div class=\"delimiter\"></div>\n            <a href=\"#\" id=\"link\" tabindex=\"-1\">\n                <img src=\"images/link-solid.svg\" />\n                <div class=\"popup\" id=\"link_popup\">\n                    <input type=\"text\" placeholder=\"URL\" class=\"url\" />\n                    <input type=\"text\" placeholder=\"Title\" class=\"title\" />\n                </div>\n            </a>\n            <a href=\"#\" id=\"image\" tabindex=\"-1\">\n                <img src=\"images/image-regular.svg\" />\n                <div class=\"popup\" id=\"link_popup\">\n                    <input type=\"text\" placeholder=\"URL\" class=\"url\" />\n                    <input type=\"text\" placeholder=\"Title\" class=\"title\" />\n                </div>\n            </a>\n            \n        </div>\n        <div id=\"placeholder\">Type: Echo!</div>\n        <baka-editable id=\"editor\" />\n    </div>");
 
     _defineProperty(_assertThisInitialized(_this), "debug", false);
 
     _defineProperty(_assertThisInitialized(_this), "elms", {});
-
-    _defineProperty(_assertThisInitialized(_this), "stylesOverride", {});
 
     _defineProperty(_assertThisInitialized(_this), "outputContainer", void 0);
 
@@ -1227,84 +1204,121 @@ function (_HTMLElement) {
       });
     }
   }, {
-    key: "updateButtons",
-    value: function updateButtons() {
-      var _this2 = this;
-
-      var range = this.elms.editor.getSelection();
-      var offset = range.startOffset;
-      var styles = range.collapsed ? Object.keys(this.document.getStylesAtOffset(offset)) : this.document.getStylesAtRange(range.startOffset, range.endOffset);
-
-      for (var styleName in this.stylesOverride) {
-        if (styles.indexOf(styleName) >= 0 && !this.stylesOverride[styleName]) {
-          styles.splice(styles.indexOf(styleName), 1);
-        }
-
-        if (styles.indexOf(styleName) < 0 && this.stylesOverride[styleName]) {
-          styles.push(styleName);
-        }
-      }
-
-      this.elms.wrapper.querySelectorAll('#buttons > a').forEach(function (el) {
-        return el.classList.remove('active');
-      });
-      styles.forEach(function (style) {
-        if (!(style in _this2.elms.buttons)) return;
-
-        _this2.elms.buttons[style].classList.add('active');
-      });
-    }
-  }, {
     key: "initButtons",
     value: function initButtons() {
-      var _this3 = this;
+      var _this2 = this;
 
-      this.elms.editor.addCursorPosListener(function () {
-        _this3.stylesOverride = {};
-
-        _this3.updateButtons();
-      });
       this.elms.buttons = {
         wrapper: this.elms.wrapper.querySelector('#buttons'),
         bold: this.elms.wrapper.querySelector('#buttons #bold'),
         italic: this.elms.wrapper.querySelector('#buttons #italic'),
         strike: this.elms.wrapper.querySelector('#buttons #strike'),
         underline: this.elms.wrapper.querySelector('#buttons #underline'),
-        monospace: this.elms.wrapper.querySelector('#buttons #monospace')
+        monospace: this.elms.wrapper.querySelector('#buttons #monospace'),
+        quote: this.elms.wrapper.querySelector('#buttons #quote'),
+        code: this.elms.wrapper.querySelector('#buttons #code'),
+        header_first: this.elms.wrapper.querySelector('#buttons #header_first'),
+        header_second: this.elms.wrapper.querySelector('#buttons #header_second')
+      };
+      this.elms.popupButtons = {
+        link: this.elms.wrapper.querySelector('#buttons #link'),
+        image: this.elms.wrapper.querySelector('#buttons #image')
       };
 
-      var onButtonClick = function onButtonClick(buttonName, e) {
-        e.preventDefault();
+      var onPopupButtonClick = function onPopupButtonClick(styleName, e) {
+        var button = _this2.elms.popupButtons[styleName];
+        var popup = button.querySelector('.popup');
+        var urlInput = popup.querySelector('input.url');
+        var titleInput = popup.querySelector('input.title');
 
-        _this3.elms.editor.focus();
-
-        var range = _this3.elms.editor.getSelection();
-
-        if (!range.collapsed) {
-          var styles = _this3.document.getStylesAtRange(range.startOffset, range.endOffset);
-
-          if (styles.indexOf(buttonName) >= 0) {
-            _this3.document.unmark(buttonName, range.startOffset, range.endOffset);
-          } else {
-            _this3.document.mark(buttonName, range.startOffset, range.endOffset);
-          }
-
-          _this3.elms.editor.cursorPos = range.endOffset;
-
-          _this3.elms.editor.setCursorPos(range.endOffset);
-
+        if ([popup, urlInput, titleInput].indexOf(e.target) >= 0) {
+          e.preventDefault();
           return;
         }
 
-        var button = _this3.elms.buttons[buttonName];
-        var isActive = button.classList.contains('active');
-        _this3.stylesOverride[buttonName] = !isActive;
+        var closePopup = function closePopup(keydownListener) {
+          urlInput.value = '';
+          titleInput.value = '';
+          button.classList.remove('active');
+
+          if (keydownListener) {
+            urlInput.removeEventListener('keydown', keydownListener);
+            titleInput.removeEventListener('keydown', keydownListener);
+          }
+        };
+
+        var getMarkup = function getMarkup(styleName) {
+          if (styleName === 'link') {
+            return "[".concat(titleInput.value, "](").concat(urlInput.value, ")");
+          }
+
+          return "![".concat(titleInput.value, "](").concat(urlInput.value, ")");
+        };
+
+        var onKeydown = function onKeydown(e) {
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            closePopup();
+            return;
+          }
+
+          if (e.key !== 'Enter') {
+            return;
+          }
+
+          e.preventDefault();
+          var markup = getMarkup(styleName);
+
+          _this2.document.insert(_this2.elms.editor.cursorPos, markup);
+
+          _this2.elms.editor.focus();
+
+          _this2.elms.editor.setCursorPos(_this2.elms.editor.cursorPos + markup.length);
+
+          closePopup(onKeydown);
+        };
+
+        var onDocumentClick = function onDocumentClick(e) {
+          console.log(e.target);
+          if ([button, button.querySelector('img'), popup, urlInput, titleInput].indexOf(e.target) >= 0) return;
+          closePopup(onKeydown);
+        };
+
+        document.addEventListener('click', onDocumentClick);
+        button.classList.toggle('active');
+
+        if (!button.classList.contains('active')) {
+          urlInput.value = '';
+          titleInput.value = '';
+          return;
+        }
+
+        urlInput.focus();
+        urlInput.addEventListener('keydown', onKeydown);
+        titleInput.addEventListener('keydown', onKeydown);
+      };
+
+      this.elms.popupButtons['link'].addEventListener('click', function (e) {
+        return onPopupButtonClick('link', e);
+      });
+      this.elms.popupButtons['image'].addEventListener('click', function (e) {
+        return onPopupButtonClick('image', e);
+      });
+
+      var onButtonClick = function onButtonClick(styleName, e) {
+        e.preventDefault();
+
+        _this2.elms.editor.focus();
+
+        var range = _this2.elms.editor.getSelection();
+
+        _this2.elms.editor.setCursorPos(_this2.document.mark(styleName, [range.startOffset, range.endOffset]));
       };
 
       var _loop = function _loop(styleName) {
-        if (!(styleName in _this3.elms.buttons)) return "continue";
+        if (!(styleName in _this2.elms.buttons)) return "continue";
 
-        _this3.elms.buttons[styleName].addEventListener('click', function (e) {
+        _this2.elms.buttons[styleName].addEventListener('click', function (e) {
           return onButtonClick(styleName, e);
         });
       };
@@ -1314,10 +1328,6 @@ function (_HTMLElement) {
 
         if (_ret === "continue") continue;
       }
-
-      window.document.addEventListener('click', function () {
-        _this3.updateButtons();
-      });
     }
   }, {
     key: "logger",
@@ -1453,6 +1463,65 @@ function (_Document) {
   }
 
   _createClass(MarkdownDocument, [{
+    key: "mark",
+    value: function mark(styleName, range) {
+      var before = '',
+          start = '',
+          end = '';
+      if (range[0] > 0 && this.text[range[0] - 1] !== '\n') before = '\n';
+
+      switch (styleName) {
+        case 'bold':
+          start = '**';
+          end = '**';
+          break;
+
+        case 'italic':
+          start = '*';
+          end = '*';
+          break;
+
+        case 'underline':
+          start = '__';
+          end = '__';
+          break;
+
+        case 'strike':
+          start = '~~';
+          end = '~~';
+          break;
+
+        case 'monospace':
+          start = '`';
+          end = '`';
+          break;
+
+        case 'quote':
+          start = before + '``\n';
+          end = '\n``\n';
+          break;
+
+        case 'code':
+          start = before + '```\n';
+          end = '\n```\n';
+          break;
+
+        case 'header_first':
+          start = before + '# ';
+          end = '\n';
+          break;
+
+        case 'header_second':
+          start = before + '## ';
+          end = '\n';
+          break;
+      }
+
+      this.insert(range[0], start);
+      this.insert(range[1] + start.length, end);
+      return range[1] + start.length;
+    }
+  }, {
     key: "getStylesAtOffset",
     value: function getStylesAtOffset(offset) {
       var styles = {};
@@ -1487,30 +1556,38 @@ function (_Document) {
   }, {
     key: "getFinalHtml",
     value: function getFinalHtml() {
+      var html = this.toHtml();
+      html = html.replace(/(?<!<span class="service">\]\(<\/span>)<baka-link class="link">(.+)<\/baka-link>/gm, function (fullMatch, link) {
+        return "<a href=\"".concat(link, "\" target=\"_blank\">").concat(link, "</a>");
+      });
       var link_titles = [];
-      this.text.replace(/(?<!!)\[([^\n\r]*?)\]\(([^\n\r]+?)\)/gm, function (full, title, link) {
+      this.text.replace(/(?<!!)\[([^\n\r\]\[]*?)\]\(([^\n\r\(\)]+?)\)/gm, function (full, title, link) {
         console.log(title, link);
         link_titles.push(title ? title : link);
       });
-      var image_titles = [];
-      this.text.replace(/!\[([^\n\r]*?)\]\(([^\n\r]+?)\)/gm, function (full, title, link) {
-        console.log(title, link);
-        image_titles.push(title ? title : '');
-      });
-      var html = this.toHtml();
       var linkCounter = -1;
-      html = html.replace(/<baka-link class="link">(.+)<\/baka-link>/gm, function (full, link) {
+      html = html.replace(/<baka-link class="link">(.+?)<\/baka-link>/gm, function (full, link) {
         console.log(full, link);
         linkCounter++;
         return "<a href=\"".concat(link, "\" target=\"_blank\">").concat(link_titles[linkCounter], "</a>");
       });
+      var image_titles = [];
+      this.text.replace(/!\[([^\n\r\[\]]*?)\]\(([^\n\r\(\)]+?)\)/gm, function (full, title, link) {
+        console.log(title, link);
+        image_titles.push(title ? title : '');
+      });
       var imageCounter = -1;
       html = html.replace(/<baka-link class="image_link">(.+)<\/baka-link>/gm, function (full, link) {
         console.log(full, link);
-        linkCounter++;
-        return "<img src=\"".concat(link, "\" title=\"").concat(image_titles[linkCounter], "\" />");
+        imageCounter++;
+        return "<img src=\"".concat(link, "\" title=\"").concat(image_titles[imageCounter], "\" />");
       });
-      html = html.replace(/\n/gm, '').replace(/\r/gm, '');
+      html = html.replace(/\\\*/gm, '*');
+      html = html.replace(/\\`/gm, '`');
+      html = html.replace(/\\_/gm, '_');
+      html = html.replace(/\\#/gm, '#');
+      html = html.replace(/\\~/gm, '~');
+      html = html.replace(/\n/gm, '<br/>').replace(/\r/gm, '').replace(/<\/h1><br\/>/gm, '</h1>').replace(/<\/h2><br\/>/gm, '</h2>');
       return html.replace(/<span class=["']service[_]*.*?["']>(.+?)<\/span>/gm, '');
     }
   }, {
@@ -1651,7 +1728,7 @@ function (_Document) {
       };
 
       var processLinks = function processLinks() {
-        _this.text.replace(/(?<!!)\[([^\n\r]*?)\]\(([^\n\r]+?)\)/gm, function (fullMatch, title, link, index) {
+        _this.text.replace(/(?<!!)\[([^\n\r\[\]\\]*?)\]\(([^\n\r]+?)\)/gm, function (fullMatch, title, link, index) {
           ranges['service'].push([index, index + 1]);
           ranges['service'].push([index + 1 + title.length, index + 1 + title.length + 1]);
           ranges['link_title'].push([index + 1, index + 1 + title.length]);
@@ -1664,7 +1741,7 @@ function (_Document) {
       };
 
       var processImages = function processImages() {
-        _this.text.replace(/\!\[([^\n\r]*?)\]\(([^\n\r]+?)\)/gm, function (fullMatch, title, link, index) {
+        _this.text.replace(/\!\[([^\n\r\]\[\\]*?)\]\(([^\n\r]+?)\)/gm, function (fullMatch, title, link, index) {
           ranges['service'].push([index, index + 2]);
           ranges['service'].push([index + 2 + title.length, index + 2 + title.length + 1]);
           ranges['image_title'].push([index + 2, index + 2 + title.length]);
@@ -1678,6 +1755,7 @@ function (_Document) {
 
       processLinks();
       processImages();
+      process(['link'], /(?<!\]\()(https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)/gm, 0);
       process(['bold'], /(?<!\*|\\\*)\*{2}[^*\n]([\s\S]+?)[^*]\*{2}(?!\*|\\)/gm, 2);
       process(['italic'], /((?<!\*|\\)\*[^*\n][\s\S]+?[^*|\\]\*(?!\*))/gm, 1);
       process(['bold', 'italic'], /(?<!\*|\\)\*{3}[^*\n]([\s\S]+?)[^*|\\]\*{3}(?!\*)/gm, 3);
@@ -1768,6 +1846,22 @@ function (_Document) {
 }(_document__WEBPACK_IMPORTED_MODULE_0__["default"]);
 
 
+
+/***/ }),
+
+/***/ "./src/utils.js":
+/*!**********************!*\
+  !*** ./src/utils.js ***!
+  \**********************/
+/*! exports provided: escapeHtml */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "escapeHtml", function() { return escapeHtml; });
+function escapeHtml(unsafe) {
+  return unsafe.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
 
 /***/ })
 

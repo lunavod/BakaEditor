@@ -243,11 +243,7 @@ class Editable extends HTMLElement {
         this.__cursorPosListeners.forEach((cb) => setTimeout(() => cb(val), 1))
     }
 
-    addCursorPosListener(cb: (event: mixed) => void): void {
-        this.__cursorPosListeners.push(cb)
-    }
-
-    getContainerOffset(container: HTMLElement): number {
+    getFlatNodes() {
         let nodes: Array<any> = Array.from(this.childNodes)
         while (nodes.filter((node) => node.childNodes.length).length) {
             nodes = nodes
@@ -258,6 +254,11 @@ class Editable extends HTMLElement {
                 )
                 .flat(Infinity)
         }
+        return nodes
+    }
+
+    getContainerOffset(container: HTMLElement): number {
+        const nodes = this.getFlatNodes()
 
         let offset = 0
         for (let node of nodes) {
@@ -269,21 +270,12 @@ class Editable extends HTMLElement {
     }
 
     getContainerAtOffset(offset: number): { line: Node, n: number } {
-        let nodes: Array<any> = Array.from(this.childNodes)
-        while (nodes.filter((node) => node.childNodes.length).length) {
-            nodes = nodes
-                .map((el: Node) =>
-                    el.nodeName === '#text' || el.nodeName === 'BR'
-                        ? [el]
-                        : Array.from(el.childNodes)
-                )
-                .flat(Infinity)
-        }
+        const nodes = this.getFlatNodes()
 
         let lastNode: Node | void = undefined
         let x = 0
         for (let node of nodes) {
-            if (node.nodeName == 'BR') {
+            if (node.nodeName === 'BR') {
                 x += 1
                 continue
             }

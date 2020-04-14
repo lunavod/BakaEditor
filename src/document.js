@@ -1,5 +1,7 @@
 // @flow
 
+import { escapeHtml } from './utils'
+
 type InsertEvent = {
     type: 'insert',
     start: number,
@@ -36,6 +38,13 @@ type MyNode = {
 
 export interface IO {
     text: string;
+    styles: {
+        [string]: {
+            openTag: string,
+            closeTag: string,
+            ranges: [[number, number]],
+        },
+    };
 
     history: Array<InsertEvent | DeleteEvent | SetTextEvent | ReplaceEvent>;
     addEventListener: (
@@ -50,9 +59,9 @@ export interface IO {
     insert(start: number, text: string): void;
     replace(start: number, end: number, text: string): void;
 
-    toHtml(): string;
+    mark(styleName: string, range: [number, number]): number;
 
-    text: string;
+    toHtml(): string;
 }
 
 export default class Document {
@@ -106,6 +115,8 @@ export default class Document {
 
     beforeDelete(start: number, n: number) {}
     beforeInsert(start: number, text: string) {}
+
+    mark(styleName: string, range: [number, number]): number {}
 
     getStylesAtOffset(offset: number) {
         let styles = {}
@@ -236,7 +247,7 @@ export default class Document {
     }
 
     toHtml(): string {
-        if (!this.text.length) return '<div class="empty">&#8203;</div>'
+        if (!this.text.length) return ''
         let allRanges: Array<{ style: string, range: [number, number] }> = []
         let lines = [[]]
         let nodes: Array<MyNode> = []
@@ -262,11 +273,6 @@ export default class Document {
             return !a.filter((el) => b.indexOf(el) < 0).length
         }
 
-        const findDiff = (a: string[], b: string[]) => {
-            let [first, second] = a.length >= b.length ? [a, b] : [b, a]
-            return first.filter((el) => second.indexOf(el) < 0)
-        }
-
         let currentNode: MyNode = {
             styles: getStylesAtOffset(0),
             text: this.text[0],
@@ -280,7 +286,7 @@ export default class Document {
 
             if (stylesEqual(currentNode.styles, styles)) {
                 currentNode.end = i
-                currentNode.text += ch === '\n' ? '<br/>' : ch
+                currentNode.text += ch
                 continue
             }
 
@@ -332,7 +338,7 @@ export default class Document {
             let prevEnd = stylesToClose
                 .map((styleName) => this.styles[styleName].closeTag)
                 .join('')
-            result += prevEnd + start + node.text
+            result += prevEnd + start + escapeHtml(node.text)
         }
 
         result += reversed([...activeStyles])
@@ -342,11 +348,7 @@ export default class Document {
         if (result.endsWith('\n') || result.endsWith('<br/>'))
             result += '&#8203;'
 
-        result = result
-            .replace(/<br\/><\//gm, '<br/>&#8203;<')
-            .replace(/<\/h1><br\/>/gm, '</h1>')
-            .replace(/<\/h2><br\/>/gm, '</h2>')
-            .replace(/\r/gm, '')
+        result = result.replace(/\r/gm, '')
 
         return result
     }

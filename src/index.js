@@ -7,11 +7,31 @@ import BakaLink from './baka_link'
 class BakaEditor extends HTMLElement {
     template = `<div id="wrapper">
         <div id="buttons">
-            <a href="#" id="bold" tabindex="-1" class="">B</a>
-            <a href="#" id="italic" tabindex="-1" class="">I</a>
-            <a href="#" id="strike" tabindex="-1" class="">S</a>
-            <a href="#" id="underline" tabindex="-1" class="">U</a>
-            <a href="#" id="monospace" tabindex="-1" class="">M</a>
+            <a href="#" id="bold" tabindex="-1">B</a>
+            <a href="#" id="italic" tabindex="-1">I</a>
+            <a href="#" id="strike" tabindex="-1">S</a>
+            <a href="#" id="underline" tabindex="-1">U</a>
+            <a href="#" id="monospace" tabindex="-1">M</a>
+            <a href="#" id="quote" tabindex="-1">&laquo;&raquo;</a>
+            <a href="#" id="code" tabindex="-1">&lt;/&gt;</a>
+            <a href="#" id="header_first" tabindex="-1">H1</a>
+            <a href="#" id="header_second" tabindex="-1">H2</a>
+            <div class="delimiter"></div>
+            <a href="#" id="link" tabindex="-1">
+                <img src="images/link-solid.svg" />
+                <div class="popup" id="link_popup">
+                    <input type="text" placeholder="URL" class="url" />
+                    <input type="text" placeholder="Title" class="title" />
+                </div>
+            </a>
+            <a href="#" id="image" tabindex="-1">
+                <img src="images/image-regular.svg" />
+                <div class="popup" id="link_popup">
+                    <input type="text" placeholder="URL" class="url" />
+                    <input type="text" placeholder="Title" class="title" />
+                </div>
+            </a>
+            
         </div>
         <div id="placeholder">Type: Echo!</div>
         <baka-editable id="editor" />
@@ -20,9 +40,16 @@ class BakaEditor extends HTMLElement {
     debug = false
 
     elms: {
+        editor: Editable,
         placeholder: HTMLElement,
+        buttons: {
+            [string]: HTMLElement,
+        },
+        popupButtons: {
+            [string]: HTMLElement,
+        },
     } = {}
-    stylesOverride = {}
+
     outputContainer: HTMLElement | void | null
     originalOutputContainer: HTMLElement | void | null
 
@@ -77,42 +104,7 @@ class BakaEditor extends HTMLElement {
         this.logger({ type: 'INIT' })
     }
 
-    updateButtons() {
-        let range = this.elms.editor.getSelection()
-        let offset = range.startOffset
-        const styles = range.collapsed
-            ? Object.keys(this.document.getStylesAtOffset(offset))
-            : this.document.getStylesAtRange(range.startOffset, range.endOffset)
-
-        for (let styleName in this.stylesOverride) {
-            if (
-                styles.indexOf(styleName) >= 0 &&
-                !this.stylesOverride[styleName]
-            ) {
-                styles.splice(styles.indexOf(styleName), 1)
-            }
-            if (
-                styles.indexOf(styleName) < 0 &&
-                this.stylesOverride[styleName]
-            ) {
-                styles.push(styleName)
-            }
-        }
-
-        this.elms.wrapper
-            .querySelectorAll('#buttons > a')
-            .forEach((el) => el.classList.remove('active'))
-        styles.forEach((style) => {
-            if (!(style in this.elms.buttons)) return
-            this.elms.buttons[style].classList.add('active')
-        })
-    }
-
     initButtons() {
-        this.elms.editor.addCursorPosListener(() => {
-            this.stylesOverride = {}
-            this.updateButtons()
-        })
         this.elms.buttons = {
             wrapper: this.elms.wrapper.querySelector('#buttons'),
             bold: this.elms.wrapper.querySelector('#buttons #bold'),
@@ -120,40 +112,127 @@ class BakaEditor extends HTMLElement {
             strike: this.elms.wrapper.querySelector('#buttons #strike'),
             underline: this.elms.wrapper.querySelector('#buttons #underline'),
             monospace: this.elms.wrapper.querySelector('#buttons #monospace'),
+            quote: this.elms.wrapper.querySelector('#buttons #quote'),
+            code: this.elms.wrapper.querySelector('#buttons #code'),
+            header_first: this.elms.wrapper.querySelector(
+                '#buttons #header_first'
+            ),
+            header_second: this.elms.wrapper.querySelector(
+                '#buttons #header_second'
+            ),
         }
 
-        const onButtonClick = (buttonName, e) => {
+        this.elms.popupButtons = {
+            link: this.elms.wrapper.querySelector('#buttons #link'),
+            image: this.elms.wrapper.querySelector('#buttons #image'),
+        }
+
+        const onPopupButtonClick = (
+            styleName: 'link' | 'image',
+            e: MouseEvent
+        ) => {
+            const button = this.elms.popupButtons[styleName]
+            const popup = button.querySelector('.popup')
+            const urlInput = popup.querySelector('input.url')
+            const titleInput = popup.querySelector('input.title')
+
+            if ([popup, urlInput, titleInput].indexOf(e.target) >= 0) {
+                e.preventDefault()
+                return
+            }
+
+            const closePopup = (keydownListener?: () => {}) => {
+                urlInput.value = ''
+                titleInput.value = ''
+                button.classList.remove('active')
+                if (keydownListener) {
+                    urlInput.removeEventListener('keydown', keydownListener)
+                    titleInput.removeEventListener('keydown', keydownListener)
+                }
+            }
+
+            const getMarkup = (styleName: 'link' | 'image') => {
+                if (styleName === 'link') {
+                    return `[${titleInput.value}](${urlInput.value})`
+                }
+
+                return `![${titleInput.value}](${urlInput.value})`
+            }
+
+            const onKeydown = (e) => {
+                if (e.key === 'Escape') {
+                    e.preventDefault()
+                    closePopup()
+                    return
+                }
+
+                if (e.key !== 'Enter') {
+                    return
+                }
+
+                e.preventDefault()
+
+                const markup = getMarkup(styleName)
+                this.document.insert(this.elms.editor.cursorPos, markup)
+
+                this.elms.editor.focus()
+                this.elms.editor.setCursorPos(
+                    this.elms.editor.cursorPos + markup.length
+                )
+
+                closePopup(onKeydown)
+            }
+
+            const onDocumentClick = (e) => {
+                console.log(e.target)
+                if (
+                    [
+                        button,
+                        button.querySelector('img'),
+                        popup,
+                        urlInput,
+                        titleInput,
+                    ].indexOf(e.target) >= 0
+                )
+                    return
+
+                closePopup(onKeydown)
+            }
+
+            document.addEventListener('click', onDocumentClick)
+
+            button.classList.toggle('active')
+
+            if (!button.classList.contains('active')) {
+                urlInput.value = ''
+                titleInput.value = ''
+                return
+            }
+
+            urlInput.focus()
+
+            urlInput.addEventListener('keydown', onKeydown)
+            titleInput.addEventListener('keydown', onKeydown)
+        }
+
+        this.elms.popupButtons['link'].addEventListener('click', (e) =>
+            onPopupButtonClick('link', e)
+        )
+        this.elms.popupButtons['image'].addEventListener('click', (e) =>
+            onPopupButtonClick('image', e)
+        )
+
+        const onButtonClick = (styleName, e) => {
             e.preventDefault()
             this.elms.editor.focus()
 
             const range = this.elms.editor.getSelection()
-            if (!range.collapsed) {
-                const styles = this.document.getStylesAtRange(
+            this.elms.editor.setCursorPos(
+                this.document.mark(styleName, [
                     range.startOffset,
-                    range.endOffset
-                )
-                if (styles.indexOf(buttonName) >= 0) {
-                    this.document.unmark(
-                        buttonName,
-                        range.startOffset,
-                        range.endOffset
-                    )
-                } else {
-                    this.document.mark(
-                        buttonName,
-                        range.startOffset,
-                        range.endOffset
-                    )
-                }
-                this.elms.editor.cursorPos = range.endOffset
-                this.elms.editor.setCursorPos(range.endOffset)
-                return
-            }
-
-            const button = this.elms.buttons[buttonName]
-            const isActive = button.classList.contains('active')
-
-            this.stylesOverride[buttonName] = !isActive
+                    range.endOffset,
+                ])
+            )
         }
 
         for (let styleName in this.document.styles) {
@@ -162,9 +241,6 @@ class BakaEditor extends HTMLElement {
                 onButtonClick(styleName, e)
             )
         }
-        window.document.addEventListener('click', () => {
-            this.updateButtons()
-        })
     }
 
     logger(historyEvent) {
