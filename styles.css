@@ -95,9 +95,7 @@ baka-editor {
 }
 
 #buttons a.active {
-    /* background: rgba(0, 0, 255, 0.08); */
     color: #ffd324;
-    /* background: #ffd324; */
 }
 
 #buttons a img {
@@ -190,10 +188,6 @@ baka-editor {
     white-space: pre-wrap;
 }
 
-/*#editor * {*/
-/*    white-space: pre-line;*/
-/*}*/
-
 #editor:focus {
     outline: 0px solid transparent;
     border-color: rgba(0, 0, 255, 0.24);
@@ -208,7 +202,7 @@ baka-editor {
 }
 
 #editor .monospace {
-    font-family: Monospace;
+    font-family: Monospace, monospace;
     background: lightgray;
     padding: 2px;
     border-radius: 4px;

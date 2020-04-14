@@ -1592,11 +1592,6 @@ function (_Document) {
     }
   }, {
     key: "styles",
-    // text = '```Hello, world!\nIts me, Dio!\n```'
-    // text = '*Привет*, **мир**!\n\n***Сегодня*** __я__ ~~делаю~~ `маркдаун`!'
-    // text = 'as\ndf'
-    // text = '> Привет!\n> Мир!\nТест'
-    // text = `*hello ~~world~~*`
     set: function set(value) {},
     get: function get() {
       var _this = this;
@@ -1685,48 +1680,6 @@ function (_Document) {
         });
       };
 
-      var processGroup = function processGroup(styleNames, regexp, n) {
-        _this.text.replace(regexp, function (fullMatch, match, index) {
-          var start = index;
-          var end = index + fullMatch.length;
-          var _iteratorNormalCompletion3 = true;
-          var _didIteratorError3 = false;
-          var _iteratorError3 = undefined;
-
-          try {
-            for (var _iterator3 = styleNames[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-              var styleName = _step3.value;
-              var prevIndex = ranges[styleName].findIndex(function (el) {
-                return el[1] + 1 === start;
-              });
-
-              if (prevIndex < 0) {
-                ranges[styleName].push([start, end]);
-                ranges.service.push([start, start + n]);
-                continue;
-              }
-
-              ranges[styleName].splice(prevIndex, 1, [ranges[styleName][prevIndex][0], end]);
-            }
-          } catch (err) {
-            _didIteratorError3 = true;
-            _iteratorError3 = err;
-          } finally {
-            try {
-              if (!_iteratorNormalCompletion3 && _iterator3["return"] != null) {
-                _iterator3["return"]();
-              }
-            } finally {
-              if (_didIteratorError3) {
-                throw _iteratorError3;
-              }
-            }
-          }
-
-          ranges.service.push([start, start + n]);
-        });
-      };
-
       var processLinks = function processLinks() {
         _this.text.replace(/(?<!!)\[([^\n\r\[\]\\]*?)\]\(([^\n\r]+?)\)/gm, function (fullMatch, title, link, index) {
           ranges['service'].push([index, index + 1]);
@@ -1756,17 +1709,16 @@ function (_Document) {
       processLinks();
       processImages();
       process(['link'], /(?<!\]\()(https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)/gm, 0);
-      process(['bold'], /(?<!\*|\\\*)\*{2}[^*\n]([\s\S]+?)[^*]\*{2}(?!\*|\\)/gm, 2);
-      process(['italic'], /((?<!\*|\\)\*[^*\n][\s\S]+?[^*|\\]\*(?!\*))/gm, 1);
-      process(['bold', 'italic'], /(?<!\*|\\)\*{3}[^*\n]([\s\S]+?)[^*|\\]\*{3}(?!\*)/gm, 3);
+      process(['italic'], /(?<!\*|\\)\*([^*]+)(?<!\\|\*)\*/gm, 1);
+      process(['bold'], /(?<!\*|\\\*)\*{2}([^*]+)\*{2}(?!\*|\\)/gm, 2);
+      process(['bold', 'italic'], /(?<!\*|\\)\*{3}([^*]+)\*{3}(?!\*)/gm, 3);
       process(['underline'], /__(.+?)__/gm, 2);
       process(['strike'], /~~(.+?)~~/gm, 2);
       process(['code'], /```([^`]+?)```/gm, 3);
       process(['quote'], /(?<!`|\\)``([^`]+?)``/gm, 2);
       process(['monospace'], /(?<!`|\\)`([^`\n\r]+?)`/gm, 1);
       processOneLine(['header_first'], /(?<!#)# ([^\r\n]+)/gm, 2);
-      processOneLine(['header_second'], /## ([^\r\n]+)/gm, 3); // processGroup(['quote'], /> ([^\n\r]+)/gm, 2)
-
+      processOneLine(['header_second'], /## ([^\r\n]+)/gm, 3);
       return {
         bold: {
           openTag: '<b>',

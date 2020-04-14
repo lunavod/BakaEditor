@@ -3,13 +3,6 @@
 import Document from './document'
 
 export default class MarkdownDocument extends Document {
-    // text = '```Hello, world!\nIts me, Dio!\n```'
-    // text = '*Привет*, **мир**!\n\n***Сегодня*** __я__ ~~делаю~~ `маркдаун`!'
-
-    // text = 'as\ndf'
-    // text = '> Привет!\n> Мир!\nТест'
-    // text = `*hello ~~world~~*`
-
     set styles(value: any) {}
     get styles() {
         let ranges: {
@@ -53,28 +46,6 @@ export default class MarkdownDocument extends Document {
                 }
                 ranges.service.push([start, start + n])
                 return match
-            })
-        }
-
-        const processGroup = (styleNames, regexp, n) => {
-            this.text.replace(regexp, (fullMatch, match, index) => {
-                let start = index
-                let end = index + fullMatch.length
-                for (let styleName of styleNames) {
-                    let prevIndex = ranges[styleName].findIndex(
-                        (el) => el[1] + 1 === start
-                    )
-                    if (prevIndex < 0) {
-                        ranges[styleName].push([start, end])
-                        ranges.service.push([start, start + n])
-                        continue
-                    }
-                    ranges[styleName].splice(prevIndex, 1, [
-                        ranges[styleName][prevIndex][0],
-                        end,
-                    ])
-                }
-                ranges.service.push([start, start + n])
             })
         }
 
@@ -133,17 +104,9 @@ export default class MarkdownDocument extends Document {
             0
         )
 
-        process(
-            ['bold'],
-            /(?<!\*|\\\*)\*{2}[^*\n]([\s\S]+?)[^*]\*{2}(?!\*|\\)/gm,
-            2
-        )
-        process(['italic'], /((?<!\*|\\)\*[^*\n][\s\S]+?[^*|\\]\*(?!\*))/gm, 1)
-        process(
-            ['bold', 'italic'],
-            /(?<!\*|\\)\*{3}[^*\n]([\s\S]+?)[^*|\\]\*{3}(?!\*)/gm,
-            3
-        )
+        process(['italic'], /(?<!\*|\\)\*([^*]+)(?<!\\|\*)\*/gm, 1)
+        process(['bold'], /(?<!\*|\\\*)\*{2}([^*]+)\*{2}(?!\*|\\)/gm, 2)
+        process(['bold', 'italic'], /(?<!\*|\\)\*{3}([^*]+)\*{3}(?!\*)/gm, 3)
 
         process(['underline'], /__(.+?)__/gm, 2)
         process(['strike'], /~~(.+?)~~/gm, 2)
@@ -154,8 +117,6 @@ export default class MarkdownDocument extends Document {
 
         processOneLine(['header_first'], /(?<!#)# ([^\r\n]+)/gm, 2)
         processOneLine(['header_second'], /## ([^\r\n]+)/gm, 3)
-
-        // processGroup(['quote'], /> ([^\n\r]+)/gm, 2)
 
         return {
             bold: {
