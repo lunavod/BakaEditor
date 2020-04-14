@@ -878,6 +878,22 @@ function (_HTMLElement) {
         if (!e.ctrlKey || e.key !== 'v') return;
         lastSelection = _this3.getSelection();
       });
+      this.addEventListener('keydown', function (e) {
+        if (!e.ctrlKey || e.key !== 'x') return;
+        lastSelection = _this3.getSelection();
+      });
+      this.addEventListener('keyup', function (e) {
+        if (!e.ctrlKey || e.key !== 'x') return;
+        var range = lastSelection;
+        _this3.cursorPos = range.startOffset;
+
+        if (range.collapsed) {
+          io["delete"](range.startOffset, 1, 'forward');
+          return;
+        }
+
+        io.replace(range.startOffset, range.endOffset, '');
+      });
       this.addEventListener('mouseup', function () {
         var range = window.getSelection().getRangeAt(0);
 

@@ -238,8 +238,26 @@ class Editable extends HTMLElement {
             lastSelection = this.getSelection()
         })
 
+        this.addEventListener('keydown', (e: any): void => {
+            if (!e.ctrlKey || e.key !== 'x') return
+            lastSelection = this.getSelection()
+        })
+
+        this.addEventListener('keyup', (e: any): void => {
+            if (!e.ctrlKey || e.key !== 'x') return
+
+            let range = lastSelection
+            this.cursorPos = range.startOffset
+
+            if (range.collapsed) {
+                io.delete(range.startOffset, 1, 'forward')
+                return
+            }
+            io.replace(range.startOffset, range.endOffset, '')
+        })
+
         this.addEventListener('mouseup', (): void => {
-            var range = window.getSelection().getRangeAt(0)
+            const range = window.getSelection().getRangeAt(0)
             if (
                 range.startContainer.parentElement.classList.contains('empty')
             ) {
