@@ -802,9 +802,18 @@ function (_HTMLElement) {
 
         text = text.slice(range.startOffset, text.length);
         var ch = io.text[range.startOffset];
-        var firstIndex;
-        var regexp = ch.match(/\s/) !== null ? /\S/gm : /\s/gm;
+        var regexp;
+
+        if (ch.match(/[*`_#~]/) !== null) {
+          regexp = /[^*`_#~]/gm;
+        } else if (ch.match(/\s/) !== null) {
+          regexp = /\S/gm;
+        } else {
+          regexp = /[*`_#~\s]/gm;
+        }
+
         var matches = Array.from(text.matchAll(regexp));
+        var firstIndex;
         if (matches.length) firstIndex = matches[0].index;else firstIndex = text.length;
         io["delete"](range.startOffset, firstIndex);
 
@@ -819,9 +828,18 @@ function (_HTMLElement) {
 
         text = text.slice(0, range.startOffset);
         var ch = io.text[range.startOffset - 1];
-        var firstIndex;
-        var regexp = ch.match(/\s/) !== null ? /\S/gm : /\s/gm;
+        var regexp;
+
+        if (ch.match(/[*`_#~]/) !== null) {
+          regexp = /[^*`_#~]/gm;
+        } else if (ch.match(/\s/) !== null) {
+          regexp = /\S/gm;
+        } else {
+          regexp = /[*`_#~\s]/gm;
+        }
+
         var matches = Array.from(text.matchAll(regexp));
+        var firstIndex;
         if (matches.length) firstIndex = matches[matches.length - 1].index + 1;else firstIndex = 0;
 
         _this3.setCursorPos(range.startOffset - text.length + firstIndex);
@@ -839,7 +857,6 @@ function (_HTMLElement) {
       });
       this.addEventListener('keydown', function (e) {
         if (!e.ctrlKey || e.key !== 'Z' || !e.shiftKey) return;
-        console.log('redo');
         io.redo();
       });
       this.addEventListener('keydown', function (e) {

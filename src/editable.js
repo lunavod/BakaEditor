@@ -150,10 +150,18 @@ class Editable extends HTMLElement {
             text = text.slice(range.startOffset, text.length)
             let ch = io.text[range.startOffset]
 
-            let firstIndex
-            let regexp = ch.match(/\s/) !== null ? /\S/gm : /\s/gm
+            let regexp
+            if (ch.match(/[*`_#~]/) !== null) {
+                regexp = /[^*`_#~]/gm
+            } else if (ch.match(/\s/) !== null) {
+                regexp = /\S/gm
+            } else {
+                regexp = /[*`_#~\s]/gm
+            }
 
             let matches = Array.from(text.matchAll(regexp))
+
+            let firstIndex
 
             if (matches.length) firstIndex = matches[0].index
             else firstIndex = text.length
@@ -173,10 +181,18 @@ class Editable extends HTMLElement {
             text = text.slice(0, range.startOffset)
             let ch = io.text[range.startOffset - 1]
 
-            let firstIndex
-            let regexp = ch.match(/\s/) !== null ? /\S/gm : /\s/gm
+            let regexp
+            if (ch.match(/[*`_#~]/) !== null) {
+                regexp = /[^*`_#~]/gm
+            } else if (ch.match(/\s/) !== null) {
+                regexp = /\S/gm
+            } else {
+                regexp = /[*`_#~\s]/gm
+            }
 
             let matches = Array.from(text.matchAll(regexp))
+
+            let firstIndex
 
             if (matches.length)
                 firstIndex = matches[matches.length - 1].index + 1
@@ -213,7 +229,7 @@ class Editable extends HTMLElement {
 
         this.addEventListener('keydown', (e: any): void => {
             if (!e.ctrlKey || e.key !== 'Z' || !e.shiftKey) return
-            console.log('redo')
+
             io.redo()
         })
 
