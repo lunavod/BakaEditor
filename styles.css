@@ -41,6 +41,27 @@ baka-editor {
     box-sizing: border-box;
 }
 
+#preview blockquote {
+    border-left: 2px solid blue;
+    background: rgba(0,0,255,.1);
+    margin: 0;
+    padding: 16px;
+}
+
+#preview .code {
+    padding: 16px;
+    border-radius: 15px;
+    background: rgba(0,0,2555, .1);
+    display: block;
+    box-shadow: 0 0 8px rgba(0,0,2555, .1);
+}
+
+#preview .monospace {
+    background: rgba(0,0,2555, .1);
+    padding: 2px;
+    border-radius: 4px;
+}
+
 #preview h1,
 #preview h2 {
     white-space: pre-wrap;
@@ -203,14 +224,15 @@ baka-editor {
 
 #editor .monospace {
     font-family: Monospace, monospace;
-    background: lightgray;
+    background: rgba(0,0,2555, .1);
     padding: 2px;
     border-radius: 4px;
     display: inline-block;
 }
 
 #editor .service {
-    color: #b1b1b1;
+    filter: opacity(50%);
+
 }
 
 #editor .code {

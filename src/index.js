@@ -42,6 +42,7 @@ class BakaEditor extends HTMLElement {
     elms: {
         editor: Editable,
         placeholder: HTMLElement,
+        wrapper: HTMLElement,
         buttons: {
             [string]: HTMLElement,
         },
@@ -98,6 +99,7 @@ class BakaEditor extends HTMLElement {
         this.document.addEventListener('update', this.onTextUpdate.bind(this))
         this.document.addEventListener('update', this.logger.bind(this))
 
+        this.updatePlaceholder()
         this.initEditor()
         this.initButtons()
 
@@ -272,18 +274,16 @@ class BakaEditor extends HTMLElement {
     }
 
     onTextUpdate() {
-        if (this.document.text.length) {
-            this.elms.placeholder.classList.add('invisible')
-        } else {
-            this.elms.placeholder.classList.remove('invisible')
-        }
+        this.updatePlaceholder()
 
         this.elms.editor.innerHTML = this.document.toHtml()
         if (this.outputContainer)
             this.outputContainer.value = this.document.getFinalHtml()
         if (this.originalOutputContainer)
             this.originalOutputContainer.value = this.document.text
+
         this.elms.editor.setCursorPos(this.elms.editor.cursorPos)
+
         this.dispatchEvent(
             new CustomEvent('change', {
                 detail: {
@@ -294,13 +294,15 @@ class BakaEditor extends HTMLElement {
         )
     }
 
-    initEditor() {
+    updatePlaceholder() {
         if (this.document.text.length) {
             this.elms.placeholder.classList.add('invisible')
         } else {
             this.elms.placeholder.classList.remove('invisible')
         }
+    }
 
+    initEditor() {
         this.elms.editor.initIO(this.document)
     }
 }

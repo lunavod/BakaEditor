@@ -540,6 +540,21 @@ function () {
         return myArr;
       };
 
+      var sortedByPriority = function sortedByPriority(arr) {
+        var asc = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
+
+        var newArr = _toConsumableArray(arr);
+
+        newArr.sort(function (a, b) {
+          var aPriority = _this.styles[a].priority;
+          var bPriority = _this.styles[b].priority;
+          if (aPriority === undefined) aPriority = 0;
+          if (bPriority === undefined) bPriority = 0;
+          return asc ? aPriority - bPriority : bPriority - aPriority;
+        });
+        return newArr;
+      };
+
       var activeStyles = new Set();
 
       for (var _i = 0, _nodes = nodes; _i < _nodes.length; _i++) {
@@ -554,7 +569,7 @@ function () {
         stylesToClose.forEach(function (styleName) {
           return activeStyles["delete"](styleName);
         });
-        var stylesToOpen = subtractArray(node.styles, _toConsumableArray(activeStyles));
+        var stylesToOpen = sortedByPriority(subtractArray(node.styles, _toConsumableArray(activeStyles)));
         stylesToOpen.forEach(function (styleName) {
           return activeStyles.add(styleName);
         });
@@ -1214,6 +1229,7 @@ function (_HTMLElement) {
       this.document = new _markdown_document__WEBPACK_IMPORTED_MODULE_0__["default"]();
       this.document.addEventListener('update', this.onTextUpdate.bind(this));
       this.document.addEventListener('update', this.logger.bind(this));
+      this.updatePlaceholder();
       this.initEditor();
       this.initButtons();
       this.logger({
@@ -1361,12 +1377,7 @@ function (_HTMLElement) {
   }, {
     key: "onTextUpdate",
     value: function onTextUpdate() {
-      if (this.document.text.length) {
-        this.elms.placeholder.classList.add('invisible');
-      } else {
-        this.elms.placeholder.classList.remove('invisible');
-      }
-
+      this.updatePlaceholder();
       this.elms.editor.innerHTML = this.document.toHtml();
       if (this.outputContainer) this.outputContainer.value = this.document.getFinalHtml();
       if (this.originalOutputContainer) this.originalOutputContainer.value = this.document.text;
@@ -1379,14 +1390,17 @@ function (_HTMLElement) {
       }));
     }
   }, {
-    key: "initEditor",
-    value: function initEditor() {
+    key: "updatePlaceholder",
+    value: function updatePlaceholder() {
       if (this.document.text.length) {
         this.elms.placeholder.classList.add('invisible');
       } else {
         this.elms.placeholder.classList.remove('invisible');
       }
-
+    }
+  }, {
+    key: "initEditor",
+    value: function initEditor() {
       this.elms.editor.initIO(this.document);
     }
   }], [{
@@ -1611,8 +1625,6 @@ function (_Document) {
     key: "styles",
     set: function set(value) {},
     get: function get() {
-      var _this = this;
-
       var ranges = {
         bold: [],
         italic: [],
@@ -1629,9 +1641,10 @@ function (_Document) {
         image_title: [],
         link_title: []
       };
+      var text = this.text;
 
       var process = function process(styleNames, regexp, n) {
-        _this.text.replace(regexp, function (fullMatch, match, index) {
+        text.replace(regexp, function (fullMatch, match, index) {
           var start = index + n;
           var end = index + fullMatch.length - n;
           var _iteratorNormalCompletion = true;
@@ -1665,7 +1678,7 @@ function (_Document) {
       };
 
       var processOneLine = function processOneLine(styleNames, regexp, n) {
-        _this.text.replace(regexp, function (fullMatch, match, index) {
+        text.replace(regexp, function (fullMatch, match, index) {
           var start = index;
           var end = index + fullMatch.length;
           var _iteratorNormalCompletion2 = true;
@@ -1698,7 +1711,7 @@ function (_Document) {
       };
 
       var processLinks = function processLinks() {
-        _this.text.replace(/(?<!!)\[([^\n\r\[\]\\]*?)\]\(([^\n\r]+?)\)/gm, function (fullMatch, title, link, index) {
+        text.replace(/(?<!!)\[([^\n\r\[\]\\]*?)\]\(([^\n\r]+?)\)/gm, function (fullMatch, title, link, index) {
           ranges['service'].push([index, index + 1]);
           ranges['service'].push([index + 1 + title.length, index + 1 + title.length + 1]);
           ranges['link_title'].push([index + 1, index + 1 + title.length]);
@@ -1711,7 +1724,7 @@ function (_Document) {
       };
 
       var processImages = function processImages() {
-        _this.text.replace(/\!\[([^\n\r\]\[\\]*?)\]\(([^\n\r]+?)\)/gm, function (fullMatch, title, link, index) {
+        text.replace(/\!\[([^\n\r\]\[\\]*?)\]\(([^\n\r]+?)\)/gm, function (fullMatch, title, link, index) {
           ranges['service'].push([index, index + 2]);
           ranges['service'].push([index + 2 + title.length, index + 2 + title.length + 1]);
           ranges['image_title'].push([index + 2, index + 2 + title.length]);
@@ -1723,19 +1736,33 @@ function (_Document) {
         });
       };
 
+      var replaced_occurrences = [];
+
+      var escapeMarkup = function escapeMarkup(regexp, n) {
+        text = text.replace(regexp, function (full, match) {
+          return full.slice(0, n) + match.replace(/[*`_#~]/gm, function (unsafe, index) {
+            replaced_occurrences.push(unsafe, index);
+            return 'Ɇ';
+          }) + full.slice(full.length - n, full.length);
+        });
+      };
+
+      escapeMarkup(/```\n([^`]+?)\n```/gm, 4);
+      escapeMarkup(/(https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)/gm, 0);
+      escapeMarkup(/(?<!`|\\)`([^`\n\r]+?)`/gm, 1);
       processLinks();
       processImages();
       process(['link'], /(?<!\]\()(https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)/gm, 0);
-      process(['italic'], /(?<!\*|\\)\*([^*]+)(?<!\\|\*)\*/gm, 1);
-      process(['bold'], /(?<!\*|\\\*)\*{2}([^*]+)\*{2}(?!\*|\\)/gm, 2);
-      process(['bold', 'italic'], /(?<!\*|\\)\*{3}([^*]+)\*{3}(?!\*)/gm, 3);
+      process(['bold'], /(?<!\*|\\\*)\*{2}([^*`{2, 3}]+)\*{2}(?!\*|\\)/gm, 2);
+      process(['italic'], /(?<!\*|\\)\*([^*`{2, 3}]+)(?<!\\|\*)\*/gm, 1);
+      process(['bold', 'italic'], /(?<!\*|\\)\*{3}([^*`{2, 3}]+)\*{3}(?!\*)/gm, 3);
       process(['underline'], /__(.+?)__/gm, 2);
       process(['strike'], /~~(.+?)~~/gm, 2);
-      process(['code'], /```([^`]+?)```/gm, 3);
-      process(['quote'], /(?<!`|\\)``([^`]+?)``/gm, 2);
+      process(['quote'], /(?<!`|\\)``\n([^`]+?)\n``/gm, 3);
       process(['monospace'], /(?<!`|\\)`([^`\n\r]+?)`/gm, 1);
-      processOneLine(['header_first'], /(?<!#)# ([^\r\n]+)/gm, 2);
-      processOneLine(['header_second'], /## ([^\r\n]+)/gm, 3);
+      process(['code'], /```\n([^`]+?)\n```/gm, 4);
+      processOneLine(['header_first'], /(?<!#|[^\n])# ([^\r\n]+)/gm, 2);
+      processOneLine(['header_second'], /(?<![^\n])## ([^\r\n#]+)/gm, 3);
       return {
         bold: {
           openTag: '<b>',
@@ -1780,7 +1807,8 @@ function (_Document) {
         quote: {
           openTag: '<blockquote>',
           closeTag: '</blockquote>',
-          ranges: ranges.quote
+          ranges: ranges.quote,
+          priority: 10
         },
         link: {
           openTag: '<baka-link class="link">',
@@ -1805,7 +1833,8 @@ function (_Document) {
         service: {
           openTag: '<span class="service">',
           closeTag: '</span>',
-          ranges: ranges.service
+          ranges: ranges.service,
+          priority: 150
         }
       };
     }

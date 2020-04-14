@@ -24,8 +24,10 @@ export default class MarkdownDocument extends Document {
             link_title: [],
         }
 
+        let text = this.text
+
         const process = (styleNames, regexp, n) => {
-            this.text.replace(regexp, (fullMatch, match, index) => {
+            text.replace(regexp, (fullMatch, match, index) => {
                 let start = index + n
                 let end = index + fullMatch.length - n
                 for (let styleName of styleNames) {
@@ -38,7 +40,7 @@ export default class MarkdownDocument extends Document {
         }
 
         const processOneLine = (styleNames, regexp, n) => {
-            this.text.replace(regexp, (fullMatch, match, index) => {
+            text.replace(regexp, (fullMatch, match, index) => {
                 let start = index
                 let end = index + fullMatch.length
                 for (let styleName of styleNames) {
@@ -50,7 +52,7 @@ export default class MarkdownDocument extends Document {
         }
 
         const processLinks = () => {
-            this.text.replace(
+            text.replace(
                 /(?<!!)\[([^\n\r\[\]\\]*?)\]\(([^\n\r]+?)\)/gm,
                 (fullMatch, title, link, index) => {
                     ranges['service'].push([index, index + 1])
@@ -73,7 +75,7 @@ export default class MarkdownDocument extends Document {
         }
 
         const processImages = () => {
-            this.text.replace(
+            text.replace(
                 /\!\[([^\n\r\]\[\\]*?)\]\(([^\n\r]+?)\)/gm,
                 (fullMatch, title, link, index) => {
                     ranges['service'].push([index, index + 2])
@@ -95,6 +97,30 @@ export default class MarkdownDocument extends Document {
             )
         }
 
+        const replaced_occurrences = []
+        const escapeMarkup = (regexp: RegExp, n: number) => {
+            text = text.replace(regexp, (full: string, match: string) => {
+                return (
+                    full.slice(0, n) +
+                    match.replace(
+                        /[*`_#~]/gm,
+                        (unsafe: string, index: number) => {
+                            replaced_occurrences.push(unsafe, index)
+                            return 'Ɇ'
+                        }
+                    ) +
+                    full.slice(full.length - n, full.length)
+                )
+            })
+        }
+
+        escapeMarkup(/```\n([^`]+?)\n```/gm, 4)
+        escapeMarkup(
+            /(https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)/gm,
+            0
+        )
+        escapeMarkup(/(?<!`|\\)`([^`\n\r]+?)`/gm, 1)
+
         processLinks()
         processImages()
 
@@ -104,19 +130,24 @@ export default class MarkdownDocument extends Document {
             0
         )
 
-        process(['italic'], /(?<!\*|\\)\*([^*]+)(?<!\\|\*)\*/gm, 1)
-        process(['bold'], /(?<!\*|\\\*)\*{2}([^*]+)\*{2}(?!\*|\\)/gm, 2)
-        process(['bold', 'italic'], /(?<!\*|\\)\*{3}([^*]+)\*{3}(?!\*)/gm, 3)
+        process(['bold'], /(?<!\*|\\\*)\*{2}([^*`{2, 3}]+)\*{2}(?!\*|\\)/gm, 2)
+        process(['italic'], /(?<!\*|\\)\*([^*`{2, 3}]+)(?<!\\|\*)\*/gm, 1)
+
+        process(
+            ['bold', 'italic'],
+            /(?<!\*|\\)\*{3}([^*`{2, 3}]+)\*{3}(?!\*)/gm,
+            3
+        )
 
         process(['underline'], /__(.+?)__/gm, 2)
         process(['strike'], /~~(.+?)~~/gm, 2)
 
-        process(['code'], /```([^`]+?)```/gm, 3)
-        process(['quote'], /(?<!`|\\)``([^`]+?)``/gm, 2)
+        process(['quote'], /(?<!`|\\)``\n([^`]+?)\n``/gm, 3)
         process(['monospace'], /(?<!`|\\)`([^`\n\r]+?)`/gm, 1)
+        process(['code'], /```\n([^`]+?)\n```/gm, 4)
 
-        processOneLine(['header_first'], /(?<!#)# ([^\r\n]+)/gm, 2)
-        processOneLine(['header_second'], /## ([^\r\n]+)/gm, 3)
+        processOneLine(['header_first'], /(?<!#|[^\n])# ([^\r\n]+)/gm, 2)
+        processOneLine(['header_second'], /(?<![^\n])## ([^\r\n#]+)/gm, 3)
 
         return {
             bold: {
@@ -163,6 +194,7 @@ export default class MarkdownDocument extends Document {
                 openTag: '<blockquote>',
                 closeTag: '</blockquote>',
                 ranges: ranges.quote,
+                priority: 10,
             },
             link: {
                 openTag: '<baka-link class="link">',
@@ -188,6 +220,7 @@ export default class MarkdownDocument extends Document {
                 openTag: '<span class="service">',
                 closeTag: '</span>',
                 ranges: ranges.service,
+                priority: 150,
             },
         }
     }

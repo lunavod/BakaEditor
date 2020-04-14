@@ -317,6 +317,18 @@ export default class Document {
             return myArr
         }
 
+        const sortedByPriority = (arr: Array<string>, asc: boolean = false) => {
+            let newArr = [...arr]
+            newArr.sort((a, b) => {
+                let aPriority = this.styles[a].priority
+                let bPriority = this.styles[b].priority
+                if (aPriority === undefined) aPriority = 0
+                if (bPriority === undefined) bPriority = 0
+                return asc ? aPriority - bPriority : bPriority - aPriority
+            })
+            return newArr
+        }
+
         let activeStyles = new Set()
         for (let node of nodes) {
             const diff = subtractArray([...activeStyles], node.styles)
@@ -329,7 +341,9 @@ export default class Document {
             )
             stylesToClose.forEach((styleName) => activeStyles.delete(styleName))
 
-            const stylesToOpen = subtractArray(node.styles, [...activeStyles])
+            const stylesToOpen = sortedByPriority(
+                subtractArray(node.styles, [...activeStyles])
+            )
             stylesToOpen.forEach((styleName) => activeStyles.add(styleName))
 
             let start = stylesToOpen
