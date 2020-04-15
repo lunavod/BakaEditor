@@ -179,22 +179,26 @@ export default class MarkdownDocument extends Document {
                 openTag: '<span class="code">',
                 closeTag: '</span>',
                 ranges: ranges.code,
+                block: true,
             },
             header_first: {
                 openTag: '<h1>',
                 closeTag: '</h1>',
                 ranges: ranges.header_first,
+                block: true,
             },
             header_second: {
                 openTag: '<h2>',
                 closeTag: '</h2>',
                 ranges: ranges.header_second,
+                block: true,
             },
             quote: {
                 openTag: '<blockquote>',
                 closeTag: '</blockquote>',
                 ranges: ranges.quote,
                 priority: 10,
+                block: true,
             },
             link: {
                 openTag: '<baka-link class="link">',
@@ -361,14 +365,27 @@ export default class MarkdownDocument extends Document {
         html = html.replace(/\\#/gm, '#')
         html = html.replace(/\\~/gm, '~')
 
-        html = html
-            .replace(/\n/gm, '<br/>')
-            .replace(/\r/gm, '')
-            .replace(/<\/h1><br\/>/gm, '</h1>')
-            .replace(/<\/h2><br\/>/gm, '</h2>')
-        return html.replace(
+        html = html.replace(/\n/gm, '<br/>').replace(/\r/gm, '')
+
+        html = html.replace(
             /<span class=["']service[_]*.*?["']>(.+?)<\/span>/gm,
             ''
         )
+
+        Object.keys(this.styles).forEach((styleName) => {
+            const style = this.styles[styleName]
+            if (!style.block) return
+            html = html.replace(
+                new RegExp(
+                    `${style.openTag}(.+)${style.closeTag.replace(
+                        '/',
+                        '\\/'
+                    )}<br\\/>`
+                ),
+                `${style.openTag}$1${style.closeTag}`
+            )
+        })
+
+        return html
     }
 }

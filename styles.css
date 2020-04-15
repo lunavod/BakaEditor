@@ -44,8 +44,8 @@ baka-editor {
 #preview blockquote {
     border-left: 2px solid blue;
     background: rgba(0,0,255,.1);
-    margin: 0;
     padding: 16px;
+    margin: 8px 0;
 }
 
 #preview .code {
@@ -54,6 +54,7 @@ baka-editor {
     background: rgba(0,0,2555, .1);
     display: block;
     box-shadow: 0 0 8px rgba(0,0,2555, .1);
+    margin: 8px 0;
 }
 
 #preview .monospace {
