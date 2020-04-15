@@ -60,6 +60,7 @@ baka-editor {
     background: rgba(0,0,2555, .1);
     padding: 2px;
     border-radius: 4px;
+    font-family: Monospace, monospace;
 }
 
 #preview h1,
@@ -115,11 +116,13 @@ baka-editor {
     position: relative;
 }
 
+
+
 #buttons a.active {
     color: #ffd324;
 }
 
-#buttons a img {
+#buttons a svg {
     height: 0.9em;
 }
 
