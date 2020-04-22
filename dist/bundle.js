@@ -249,10 +249,9 @@ function () {
   _createClass(Document, [{
     key: "undo",
     value: function undo() {
-      if (this.historyOffset === this.history.length - 1) return;
+      if (this.historyOffset === this.history.length - 1 || this.history[this.history.length - this.historyOffset - 2].type === 'set text') return;
       this.historyOffset += 1;
       var item = this.history[this.history.length - this.historyOffset - 1];
-      console.log(this.history, this.historyOffset, item);
 
       switch (item.type) {
         case 'insert':
@@ -273,10 +272,9 @@ function () {
   }, {
     key: "redo",
     value: function redo() {
-      if (this.historyOffset === 0) return;
-      this.historyOffset -= 1;
+      if (this.historyOffset === -1) return;
       var item = this.history[this.history.length - this.historyOffset - 1];
-      console.log(this.history, this.historyOffset, item);
+      this.historyOffset -= 1;
 
       switch (item.type) {
         case 'insert':
@@ -588,7 +586,8 @@ function () {
         return _this.styles[styleName].closeTag;
       }).join('');
       if (result.endsWith('\n') || result.endsWith('<br/>')) result += '&#8203;';
-      result = result.replace(/\r/gm, '');
+      result = result.replace(/\r/gm, ''); // console.log(result)
+
       return result;
     }
   }]);
@@ -683,6 +682,12 @@ function (_HTMLElement) {
 
     _this = _super.call.apply(_super, [this].concat(args));
 
+    _defineProperty(_assertThisInitialized(_this), "updated", false);
+
+    _defineProperty(_assertThisInitialized(_this), "range", {});
+
+    _defineProperty(_assertThisInitialized(_this), "lastSelection", {});
+
     _defineProperty(_assertThisInitialized(_this), "__cursorPos", 0);
 
     _defineProperty(_assertThisInitialized(_this), "__cursorPosListeners", []);
@@ -705,9 +710,16 @@ function (_HTMLElement) {
     value: function initIO(io) {
       var _this3 = this;
 
-      var lastSelection;
       this.innerHTML = io.toHtml();
+      io.addEventListener('update', function (data) {
+        console.log(data);
+        _this3.innerHTML = io.toHtml();
+        _this3.lastSelection = _this3.getSelection();
+        if (_this3.innerText) _this3.updated = true;
+      });
       io.addEventListener('undo', function (revertedItem) {
+        console.log('Undo', revertedItem);
+
         if (revertedItem.type === 'insert') {
           _this3.setCursorPos(revertedItem.start);
         }
@@ -717,6 +729,8 @@ function (_HTMLElement) {
         }
       });
       io.addEventListener('redo', function (revertedItem) {
+        console.log('Redo', revertedItem);
+
         if (revertedItem.type === 'insert') {
           _this3.setCursorPos(revertedItem.start + revertedItem.value.length);
         }
@@ -726,182 +740,96 @@ function (_HTMLElement) {
         }
       });
 
-      var insertText = function insertText(text, range) {
-        console.log(range);
-
-        if (range.collapsed) {
-          _this3.cursorPos = range.startOffset + text.length;
-          io.insert(range.startOffset, text);
-        } else {
-          _this3.cursorPos = range.startOffset + text.length; // this.setCursorPos(range.startOffset + text.length)
-
-          io.replace(range.startOffset, range.endOffset, text);
-        }
+      var saveSelection = function saveSelection() {
+        _this3.lastSelection = _this3.getSelection();
       };
 
-      this.addEventListener('paste', function (e) {
-        e.preventDefault();
-        var clipboardData = e.clipboardData || window.clipboardData;
-        var pastedData = clipboardData.getData('Text').replace(/\r/gm, '');
-        console.log(pastedData, pastedData.length);
-        var range = lastSelection && !lastSelection.collapsed ? lastSelection : _this3.getSelection();
-        insertText(pastedData, range);
-        lastSelection = null;
-      });
-      this.addEventListener('beforeinput', function (e) {
-        if (e.inputType !== 'insertText') return;
-        e.preventDefault();
-        console.log('Last vs new:');
-        console.log(lastSelection, _this3.getSelection());
-        var range = lastSelection && !lastSelection.collapsed ? lastSelection : _this3.getSelection();
-        insertText(e.data, range);
-      });
-      this.addEventListener('beforeinput', function (e) {
-        if (e.inputType !== 'insertParagraph') return;
-        e.preventDefault();
-
-        var range = _this3.getSelection();
-
-        console.log(range.startOffset);
-
-        if (range.collapsed) {
-          _this3.cursorPos = range.startOffset + 1;
-
-          _this3.setCursorPos(range.startOffset + 1);
-
-          io.insert(range.startOffset, '\n');
-          return;
-        }
-
-        _this3.cursorPos = range.startOffset + 1;
-        io.replace(range.startOffset, range.endOffset, '\n');
-      });
-      this.addEventListener('beforeinput', function (e) {
-        if (e.inputType !== 'deleteContentBackward') return;
-        e.preventDefault();
-
-        var range = _this3.getSelection();
-
-        if (range.startOffset < 1 && range.collapsed) return;
-
-        if (range.collapsed) {
-          _this3.cursorPos = range.startOffset - 1;
-          io["delete"](range.startOffset - 1, 1);
-          return;
-        }
-
-        _this3.cursorPos = range.startOffset;
-        io["delete"](range.startOffset, range.endOffset - range.startOffset);
-      });
-      this.addEventListener('beforeinput', function (e) {
-        if (e.inputType !== 'deleteContentForward') return;
-        e.preventDefault();
-
-        var range = _this3.getSelection();
-
-        _this3.cursorPos = range.startOffset;
-
-        if (range.collapsed) {
-          io["delete"](range.startOffset, 1, 'forward');
-          return;
-        }
-
-        io.replace(range.startOffset, range.endOffset, '');
-      });
+      this.addEventListener('keyup', saveSelection);
+      this.addEventListener('keydown', saveSelection);
+      this.addEventListener('click', saveSelection);
       this.addEventListener('keydown', function (e) {
-        if (!e.ctrlKey || e.key !== 'Delete') return;
+        // e.keyCode 90 = 'z'
+        if (!e.ctrlKey || e.shiftKey || e.keyCode !== 90) return;
         e.preventDefault();
-        var text = io.text;
-
-        var range = _this3.getSelection();
-
-        text = text.slice(range.startOffset, text.length);
-        var ch = io.text[range.startOffset];
-        var regexp;
-
-        if (ch.match(/[*`_#~]/) !== null) {
-          regexp = /[^*`_#~]/gm;
-        } else if (ch.match(/\s/) !== null) {
-          regexp = /\S/gm;
-        } else {
-          regexp = /[*`_#~\s]/gm;
-        }
-
-        var matches = Array.from(text.matchAll(regexp));
-        var firstIndex;
-        if (matches.length) firstIndex = matches[0].index;else firstIndex = text.length;
-        io["delete"](range.startOffset, firstIndex);
-
-        _this3.setCursorPos(range.startOffset);
-      });
-      this.addEventListener('keydown', function (e) {
-        if (!e.ctrlKey || e.key !== 'Backspace') return;
-        e.preventDefault();
-        var text = io.text;
-
-        var range = _this3.getSelection();
-
-        text = text.slice(0, range.startOffset);
-        var ch = io.text[range.startOffset - 1];
-        var regexp;
-
-        if (ch.match(/[*`_#~]/) !== null) {
-          regexp = /[^*`_#~]/gm;
-        } else if (ch.match(/\s/) !== null) {
-          regexp = /\S/gm;
-        } else {
-          regexp = /[*`_#~\s]/gm;
-        }
-
-        var matches = Array.from(text.matchAll(regexp));
-        var firstIndex;
-        if (matches.length) firstIndex = matches[matches.length - 1].index + 1;else firstIndex = 0;
-
-        _this3.setCursorPos(range.startOffset - text.length + firstIndex);
-
-        io["delete"](range.startOffset - text.length + firstIndex, text.length - firstIndex);
-      });
-      this.addEventListener('keyup', function (e) {
-        var navigationKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'];
-        if (navigationKeys.indexOf(e.key) < 0) return;
-        _this3.cursorPos = _this3.getCursorPos();
-      });
-      this.addEventListener('keydown', function (e) {
-        if (!e.ctrlKey || e.key !== 'z' || e.shiftKey) return;
         io.undo();
+        _this3.updated = true;
       });
       this.addEventListener('keydown', function (e) {
-        if (!e.ctrlKey || e.key !== 'Z' || !e.shiftKey) return;
+        // e.keyCode 90 = 'z'
+        if (!e.ctrlKey || !e.shiftKey || e.keyCode !== 90) return;
+        e.preventDefault();
         io.redo();
+        _this3.updated = true;
       });
       this.addEventListener('keydown', function (e) {
-        if (!e.ctrlKey || e.key !== 'v') return;
-        lastSelection = _this3.getSelection();
+        // e.keyCode 89 = 'y'
+        if (!e.ctrlKey || e.shiftKey || e.keyCode !== 89) return;
+        e.preventDefault();
+        io.redo();
+        _this3.updated = true;
       });
-      this.addEventListener('keydown', function (e) {
-        if (!e.ctrlKey || e.key !== 'x') return;
-        lastSelection = _this3.getSelection();
-      });
-      this.addEventListener('keyup', function (e) {
-        if (!e.ctrlKey || e.key !== 'x') return;
-        var range = lastSelection;
-        _this3.cursorPos = range.startOffset;
 
-        if (range.collapsed) {
-          io["delete"](range.startOffset, 1, 'forward');
+      var callback = function callback(m) {
+        console.log(m);
+        var before = io.text;
+        var after = _this3.innerText;
+
+        var range = _this3.getSelection();
+
+        if (_this3.updated) {
+          console.log('IGNORED');
+
+          _this3.setCursorPos(_this3.cursorPos);
+
+          _this3.updated = false;
           return;
         }
 
-        io.replace(range.startOffset, range.endOffset, '');
-      });
-      this.addEventListener('mouseup', function () {
-        var range = window.getSelection().getRangeAt(0);
+        console.log('USED');
 
-        if (range.startContainer.parentElement.classList.contains('empty')) {
-          _this3.setCursorPos(0);
+        if (_this3.lastSelection.collapsed) {
+          if (before.length < after.length) {
+            var start = _this3.lastSelection.startOffset;
+            var end = start + (after.length - before.length);
+
+            var change = _this3.innerText.slice(start, end);
+
+            if (change === '\n\n') change = '\n';
+            io.insert(start, change);
+            _this3.cursorPos = start + change.length;
+          } else {
+            var _start = range.startOffset;
+            var _end = _this3.lastSelection.startOffset;
+
+            if (_end - _start < 0) {
+              _end = _this3.lastSelection.startOffset;
+              _start = _this3.lastSelection.startOffset - 1;
+            }
+
+            io["delete"](_start, _end - _start);
+            _this3.cursorPos = _start;
+          }
+        } else {
+          console.log(_this3.lastSelection);
+          var _start2 = _this3.lastSelection.startOffset;
+          var _end2 = _this3.lastSelection.endOffset;
+
+          var value = _this3.innerText.slice(_start2, range.startOffset);
+
+          io.replace(_start2, _end2, value);
+          _this3.cursorPos = range.startOffset;
         }
 
-        _this3.cursorPos = _this3.getCursorPos();
+        _this3.setCursorPos(_this3.cursorPos);
+
+        saveSelection();
+      };
+
+      var observer = new MutationObserver(callback);
+      observer.observe(this, {
+        childList: true,
+        subtree: true,
+        characterData: true
       });
     }
   }, {
@@ -922,6 +850,10 @@ function (_HTMLElement) {
   }, {
     key: "getContainerOffset",
     value: function getContainerOffset(container) {
+      while (container.nodeName !== '#text' && container.firstChild !== null) {
+        container = container.firstChild;
+      }
+
       var nodes = this.getFlatNodes();
       var offset = 0;
       var _iteratorNormalCompletion = true;
@@ -931,7 +863,11 @@ function (_HTMLElement) {
       try {
         for (var _iterator = nodes[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
           var node = _step.value;
-          if (node === container) break;
+
+          if (node === container) {
+            break;
+          }
+
           offset += node.length || 1;
         }
       } catch (err) {
@@ -1008,14 +944,15 @@ function (_HTMLElement) {
       var n = containerData.n;
       if (!node) return;
       if (node.firstChild) node = node.firstChild;
+      var range;
 
       try {
-        var range = window.getSelection().getRangeAt(0);
+        range = window.getSelection().getRangeAt(0);
       } catch (err) {
         return;
-      }
+      } // console.log(offset - n, offset, n)
 
-      console.log(offset - n, offset, n);
+
       range.setEnd(node, offset - n);
       range.setStart(node, offset - n);
       this.cursorPos = offset;
@@ -1024,9 +961,10 @@ function (_HTMLElement) {
     key: "getCursorPos",
     value: function getCursorPos() {
       var caretOffset = 0;
+      var range;
 
       try {
-        var range = window.getSelection().getRangeAt(0);
+        range = window.getSelection().getRangeAt(0);
       } catch (err) {
         return 0;
       }
@@ -1050,8 +988,7 @@ function (_HTMLElement) {
       var range;
 
       try {
-        range = window.getSelection().getRangeAt(0); // console.log('Original range:', range)
-        // return range
+        range = window.getSelection().getRangeAt(0);
       } catch (err) {
         return {
           startOffset: 0,
@@ -1067,7 +1004,7 @@ function (_HTMLElement) {
 
       var result = {};
       var firstOffset = this.getContainerOffset(range.startContainer);
-      var secondOffset = this.getContainerOffset(range.endContainer); // console.log('Offsets:', firstOffset, secondOffset)
+      var secondOffset = this.getContainerOffset(range.endContainer);
 
       result.toString = function () {
         return range.toString();
@@ -1078,6 +1015,12 @@ function (_HTMLElement) {
       result.startOffset = range.startOffset + firstOffset;
       result.endContainer = range.endContainer;
       result.endOffset = range.endOffset + secondOffset;
+
+      if (range.startContainer === this && range.endContainer === this && range.startOffset === 0 && range.endOffset === 1) {
+        result.startOffset = 0;
+        result.endOffset = this.innerText.length;
+      }
+
       return result;
     }
   }, {
@@ -1401,11 +1344,11 @@ function (_HTMLElement) {
   }, {
     key: "onTextUpdate",
     value: function onTextUpdate() {
-      this.updatePlaceholder();
-      this.elms.editor.innerHTML = this.document.toHtml();
+      this.updatePlaceholder(); // this.elms.editor.innerHTML = this.document.toHtml()
+
       if (this.outputContainer) this.outputContainer.value = this.document.getFinalHtml();
-      if (this.originalOutputContainer) this.originalOutputContainer.value = this.document.text;
-      this.elms.editor.setCursorPos(this.elms.editor.cursorPos);
+      if (this.originalOutputContainer) this.originalOutputContainer.value = this.document.text; // this.elms.editor.setCursorPos(this.elms.editor.cursorPos)
+
       this.dispatchEvent(new CustomEvent('change', {
         detail: {
           original: this.document.text,
@@ -1613,15 +1556,19 @@ function (_Document) {
     value: function getFinalHtml() {
       var _this = this;
 
-      var html = this.toHtml();
-      html = html.replace(/(?<!<span class="service">\]\(<\/span>)<baka-link class="link">(.+)<\/baka-link>/gm, function (fullMatch, link) {
-        return "<a href=\"".concat(link, "\" target=\"_blank\">").concat(link, "</a>");
-      });
-      var link_titles = [];
-      this.text.replace(/(?<!!)\[([^\n\r\]\[]*?)\]\(([^\n\r\(\)]+?)\)/gm, function (full, title, link) {
-        console.log(title, link);
-        link_titles.push(title ? title : link);
-      });
+      var html = this.toHtml(); // html = html.replace(
+      //     /(?<!<span class="service">\]\(<\/span>)<baka-link class="link">(.+)<\/baka-link>/gm,
+      //     (fullMatch, link) => `<a href="${link}" target="_blank">${link}</a>`
+      // )
+
+      var link_titles = []; // this.text.replace(
+      //     /(?<!!)\[([^\n\r\]\[]*?)\]\(([^\n\r\(\)]+?)\)/gm,
+      //     (full, title, link) => {
+      //         console.log(title, link)
+      //         link_titles.push(title ? title : link)
+      //     }
+      // )
+
       var linkCounter = -1;
       html = html.replace(/<baka-link class="link">(.+?)<\/baka-link>/gm, function (full, link) {
         console.log(full, link);
@@ -1675,8 +1622,9 @@ function (_Document) {
       };
       var text = this.text;
 
-      var process = function process(styleNames, regexp, n) {
-        text.replace(regexp, function (fullMatch, match, index) {
+      var process = function process(styleNames, regexp, trigger) {
+        var n = trigger.length;
+        text = text.replace(regexp, function (fullMatch, match, index) {
           var start = index + n;
           var end = index + fullMatch.length - n;
           var _iteratorNormalCompletion = true;
@@ -1705,8 +1653,10 @@ function (_Document) {
 
           ranges.service.push([start - n, start]);
           ranges.service.push([end, end + n]);
-          return match;
-        });
+          var escapedTrigger = Array(n + 1).join('Ɇ'); // console.log(trigger, n, escapedTrigger)
+
+          return escapedTrigger + match + escapedTrigger;
+        }); // console.log(text)
       };
 
       var processOneLine = function processOneLine(styleNames, regexp, n) {
@@ -1742,17 +1692,26 @@ function (_Document) {
         });
       };
 
-      var processLinks = function processLinks() {
-        text.replace(/(?<!!)\[([^\n\r\[\]\\]*?)\]\(([^\n\r]+?)\)/gm, function (fullMatch, title, link, index) {
-          ranges['service'].push([index, index + 1]);
-          ranges['service'].push([index + 1 + title.length, index + 1 + title.length + 1]);
-          ranges['link_title'].push([index + 1, index + 1 + title.length]);
-          var linkStart = index + 1 + title.length + 2;
-          var linkEnd = linkStart + link.length;
-          ranges['service'].push([linkStart - 1, linkStart]);
-          ranges['service'].push([linkEnd, linkEnd + 1]);
-          ranges['link'].push([linkStart, linkEnd]);
-        });
+      var processLinks = function processLinks() {// text.replace(
+        //     /(?<!!)\[([^\n\r\[\]\\]*?)\]\(([^\n\r]+?)\)/gm,
+        //     (fullMatch, title, link, index) => {
+        //         ranges['service'].push([index, index + 1])
+        //         ranges['service'].push([
+        //             index + 1 + title.length,
+        //             index + 1 + title.length + 1,
+        //         ])
+        //         ranges['link_title'].push([
+        //             index + 1,
+        //             index + 1 + title.length,
+        //         ])
+        //
+        //         let linkStart = index + 1 + title.length + 2
+        //         let linkEnd = linkStart + link.length
+        //         ranges['service'].push([linkStart - 1, linkStart])
+        //         ranges['service'].push([linkEnd, linkEnd + 1])
+        //         ranges['link'].push([linkStart, linkEnd])
+        //     }
+        // )
       };
 
       var processImages = function processImages() {
@@ -1781,20 +1740,29 @@ function (_Document) {
 
       escapeMarkup(/```\n([^`]+?)\n```/gm, 4);
       escapeMarkup(/(https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)/gm, 0);
-      escapeMarkup(/(?<!`|\\)`([^`\n\r]+?)`/gm, 1);
+      escapeMarkup(/\\(\*)/, 0); // escapeMarkup(/(?<!`|\\)`([^`\n\r]+?)`/gm, 1)
+
       processLinks();
-      processImages();
-      process(['link'], /(?<!\]\()(https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)/gm, 0);
-      process(['bold'], /(?<!\*|\\\*)\*{2}([^*`{2, 3}]+)\*{2}(?!\*|\\)/gm, 2);
-      process(['italic'], /(?<!\*|\\)\*([^*`{2, 3}]+)(?<!\\|\*)\*/gm, 1);
-      process(['bold', 'italic'], /(?<!\*|\\)\*{3}([^*`{2, 3}]+)\*{3}(?!\*)/gm, 3);
-      process(['underline'], /__(.+?)__/gm, 2);
-      process(['strike'], /~~(.+?)~~/gm, 2);
-      process(['quote'], /(?<!`|\\)``\n([^`]+?)\n``/gm, 3);
-      process(['monospace'], /(?<!`|\\)`([^`\n\r]+?)`/gm, 1);
-      process(['code'], /```\n([^`]+?)\n```/gm, 4);
-      processOneLine(['header_first'], /(?<!#|[^\n])# ([^\r\n]+)/gm, 2);
-      processOneLine(['header_second'], /(?<![^\n])## ([^\r\n#]+)/gm, 3);
+      processImages(); // process(
+      //     ['link'],
+      //     /(?<!\]\()(https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)/gm,
+      //     0
+      // )
+      //
+
+      process(['bold', 'italic'], /(?!\\)\*{3}([^\*]+)\*{3}/gm, '***');
+      process(['bold'], /(?!\\)\*{2}(?!\*)([^\*]+)\*{2}(?!\*|\\)/gm, '**');
+      process(['italic'], /(?!\\)\*(?!\*)([^\*]+)\*/gm, '*'); //
+      // process(['underline'], /__(.+?)__/gm, 2)
+      // process(['strike'], /~~(.+?)~~/gm, 2)
+      //
+      // process(['quote'], /(?<!`|\\)``\n([^`]+?)\n``/gm, 3)
+      // process(['monospace'], /(?<!`|\\)`([^`\n\r]+?)`/gm, 1)
+      // process(['code'], /```\n([^`]+?)\n```/gm, 4)
+      //
+      // processOneLine(['header_first'], /(?<!#|[^\n])# ([^\r\n]+)/gm, 2)
+      // processOneLine(['header_second'], /(?<![^\n])## ([^\r\n#]+)/gm, 3)
+
       return {
         bold: {
           openTag: '<b>',

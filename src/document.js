@@ -65,16 +65,20 @@ export interface IO {
 }
 
 export default class Document {
-    //    text = 'aabb\nbbaa\n'
     text = ''
     history: Array<InsertEvent | DeleteEvent | SetTextEvent | ReplaceEvent> = []
     historyOffset: number = -1
 
     undo() {
-        if (this.historyOffset === this.history.length - 1) return
+        if (
+            this.historyOffset === this.history.length - 1 ||
+            this.history[this.history.length - this.historyOffset - 2].type ===
+                'set text'
+        )
+            return
         this.historyOffset += 1
         let item = this.history[this.history.length - this.historyOffset - 1]
-        console.log(this.history, this.historyOffset, item)
+
         switch (item.type) {
             case 'insert':
                 this.delete(item.start, item.value.length, 'back', false)
@@ -95,10 +99,10 @@ export default class Document {
     }
 
     redo() {
-        if (this.historyOffset === 0) return
-        this.historyOffset -= 1
+        if (this.historyOffset === -1) return
         let item = this.history[this.history.length - this.historyOffset - 1]
-        console.log(this.history, this.historyOffset, item)
+        this.historyOffset -= 1
+
         switch (item.type) {
             case 'insert':
                 this.insert(item.start, item.value, false)
@@ -363,7 +367,7 @@ export default class Document {
             result += '&#8203;'
 
         result = result.replace(/\r/gm, '')
-
+        // console.log(result)
         return result
     }
 }
