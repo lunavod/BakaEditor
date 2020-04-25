@@ -25,7 +25,7 @@ body {
 }
 
 baka-editor {
-    width: 50%;
+    width: calc((100% - 32px) / 2 + 32px);
     max-height: 900px;
     overflow: auto;
 }
@@ -36,7 +36,7 @@ baka-editor {
     background: #d4d5ff00;
     border-left: 1px solid rgba(0, 0, 255, 0.12);
     padding: var(--editor-padding);
-    width: 50%;
+    width: calc((100% - 32px) / 2);
     min-height: 400px;
     box-sizing: border-box;
 }

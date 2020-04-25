@@ -26,7 +26,5 @@
     "stylelint-config-recommended": "^3.0.0",
     "webpack": "^4.42.0"
   },
-  "dependencies": {
-    "diff": "^4.0.2"
-  }
+  "dependencies": {}
 }

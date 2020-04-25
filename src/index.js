@@ -273,13 +273,13 @@ class BakaEditor extends HTMLElement {
     onTextUpdate() {
         this.updatePlaceholder()
 
-        // this.elms.editor.innerHTML = this.document.toHtml()
+        this.elms.editor.innerHTML = this.document.toHtml()
         if (this.outputContainer)
             this.outputContainer.value = this.document.getFinalHtml()
         if (this.originalOutputContainer)
             this.originalOutputContainer.value = this.document.text
 
-        // this.elms.editor.setCursorPos(this.elms.editor.cursorPos)
+        this.elms.editor.setCursorPos(this.elms.editor.cursorPos)
 
         this.dispatchEvent(
             new CustomEvent('change', {

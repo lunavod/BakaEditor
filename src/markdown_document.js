@@ -26,9 +26,8 @@ export default class MarkdownDocument extends Document {
 
         let text = this.text
 
-        const process = (styleNames, regexp, trigger) => {
-            const n = trigger.length
-            text = text.replace(regexp, (fullMatch, match, index) => {
+        const process = (styleNames, regexp, n) => {
+            text.replace(regexp, (fullMatch, match, index) => {
                 let start = index + n
                 let end = index + fullMatch.length - n
                 for (let styleName of styleNames) {
@@ -36,11 +35,8 @@ export default class MarkdownDocument extends Document {
                 }
                 ranges.service.push([start - n, start])
                 ranges.service.push([end, end + n])
-                const escapedTrigger = Array(n + 1).join('Ɇ')
-                // console.log(trigger, n, escapedTrigger)
-                return escapedTrigger + match + escapedTrigger
+                return match
             })
-            // console.log(text)
         }
 
         const processOneLine = (styleNames, regexp, n) => {
@@ -56,26 +52,26 @@ export default class MarkdownDocument extends Document {
         }
 
         const processLinks = () => {
-            // text.replace(
-            //     /(?<!!)\[([^\n\r\[\]\\]*?)\]\(([^\n\r]+?)\)/gm,
-            //     (fullMatch, title, link, index) => {
-            //         ranges['service'].push([index, index + 1])
-            //         ranges['service'].push([
-            //             index + 1 + title.length,
-            //             index + 1 + title.length + 1,
-            //         ])
-            //         ranges['link_title'].push([
-            //             index + 1,
-            //             index + 1 + title.length,
-            //         ])
-            //
-            //         let linkStart = index + 1 + title.length + 2
-            //         let linkEnd = linkStart + link.length
-            //         ranges['service'].push([linkStart - 1, linkStart])
-            //         ranges['service'].push([linkEnd, linkEnd + 1])
-            //         ranges['link'].push([linkStart, linkEnd])
-            //     }
-            // )
+            text.replace(
+                /(?<!!)\[([^\n\r\[\]\\]*?)\]\(([^\n\r]+?)\)/gm,
+                (fullMatch, title, link, index) => {
+                    ranges['service'].push([index, index + 1])
+                    ranges['service'].push([
+                        index + 1 + title.length,
+                        index + 1 + title.length + 1,
+                    ])
+                    ranges['link_title'].push([
+                        index + 1,
+                        index + 1 + title.length,
+                    ])
+
+                    let linkStart = index + 1 + title.length + 2
+                    let linkEnd = linkStart + link.length
+                    ranges['service'].push([linkStart - 1, linkStart])
+                    ranges['service'].push([linkEnd, linkEnd + 1])
+                    ranges['link'].push([linkStart, linkEnd])
+                }
+            )
         }
 
         const processImages = () => {
@@ -123,35 +119,35 @@ export default class MarkdownDocument extends Document {
             /(https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)/gm,
             0
         )
-
-        escapeMarkup(/\\(\*)/, 0)
-        // escapeMarkup(/(?<!`|\\)`([^`\n\r]+?)`/gm, 1)
+        escapeMarkup(/(?<!`|\\)`([^`\n\r]+?)`/gm, 1)
 
         processLinks()
         processImages()
 
-        // process(
-        //     ['link'],
-        //     /(?<!\]\()(https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)/gm,
-        //     0
-        // )
-        //
+        process(
+            ['link'],
+            /(?<!\]\()(https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)/gm,
+            0
+        )
 
-        process(['bold', 'italic'], /(?!\\)\*{3}([^\*]+)\*{3}/gm, '***')
+        process(['bold'], /(?<!\*|\\\*)\*{2}([^*`{2, 3}]+)\*{2}(?!\*|\\)/gm, 2)
+        process(['italic'], /(?<!\*|\\)\*([^*`{2, 3}]+)(?<!\\|\*)\*/gm, 1)
 
-        process(['bold'], /(?!\\)\*{2}(?!\*)([^\*]+)\*{2}(?!\*|\\)/gm, '**')
-        process(['italic'], /(?!\\)\*(?!\*)([^\*]+)\*/gm, '*')
+        process(
+            ['bold', 'italic'],
+            /(?<!\*|\\)\*{3}([^*`{2, 3}]+)\*{3}(?!\*)/gm,
+            3
+        )
 
-        //
-        // process(['underline'], /__(.+?)__/gm, 2)
-        // process(['strike'], /~~(.+?)~~/gm, 2)
-        //
-        // process(['quote'], /(?<!`|\\)``\n([^`]+?)\n``/gm, 3)
-        // process(['monospace'], /(?<!`|\\)`([^`\n\r]+?)`/gm, 1)
-        // process(['code'], /```\n([^`]+?)\n```/gm, 4)
-        //
-        // processOneLine(['header_first'], /(?<!#|[^\n])# ([^\r\n]+)/gm, 2)
-        // processOneLine(['header_second'], /(?<![^\n])## ([^\r\n#]+)/gm, 3)
+        process(['underline'], /__(.+?)__/gm, 2)
+        process(['strike'], /~~(.+?)~~/gm, 2)
+
+        process(['quote'], /(?<!`|\\)``\n([^`]+?)\n``/gm, 3)
+        process(['monospace'], /(?<!`|\\)`([^`\n\r]+?)`/gm, 1)
+        process(['code'], /```\n([^`]+?)\n```/gm, 4)
+
+        processOneLine(['header_first'], /(?<!#|[^\n])# ([^\r\n]+)/gm, 2)
+        processOneLine(['header_second'], /(?<![^\n])## ([^\r\n#]+)/gm, 3)
 
         return {
             bold: {
@@ -320,19 +316,19 @@ export default class MarkdownDocument extends Document {
     getFinalHtml() {
         let html = this.toHtml()
 
-        // html = html.replace(
-        //     /(?<!<span class="service">\]\(<\/span>)<baka-link class="link">(.+)<\/baka-link>/gm,
-        //     (fullMatch, link) => `<a href="${link}" target="_blank">${link}</a>`
-        // )
+        html = html.replace(
+            /(?<!<span class="service">\]\(<\/span>)<baka-link class="link">(.+)<\/baka-link>/gm,
+            (fullMatch, link) => `<a href="${link}" target="_blank">${link}</a>`
+        )
 
         const link_titles = []
-        // this.text.replace(
-        //     /(?<!!)\[([^\n\r\]\[]*?)\]\(([^\n\r\(\)]+?)\)/gm,
-        //     (full, title, link) => {
-        //         console.log(title, link)
-        //         link_titles.push(title ? title : link)
-        //     }
-        // )
+        this.text.replace(
+            /(?<!!)\[([^\n\r\]\[]*?)\]\(([^\n\r\(\)]+?)\)/gm,
+            (full, title, link) => {
+                console.log(title, link)
+                link_titles.push(title ? title : link)
+            }
+        )
 
         let linkCounter = -1
         html = html.replace(
