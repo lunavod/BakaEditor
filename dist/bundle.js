@@ -867,23 +867,39 @@ function (_HTMLElement) {
         _this3.cursorPos = _this3.getCursorPos();
       });
       this.addEventListener('keydown', function (e) {
-        if (!e.ctrlKey || e.key !== 'z' || e.shiftKey) return;
+        // e.keyCode 90 = 'z'
+        if (!e.ctrlKey || e.shiftKey || e.keyCode !== 90) return;
+        e.preventDefault();
         io.undo();
+        _this3.updated = true;
       });
       this.addEventListener('keydown', function (e) {
-        if (!e.ctrlKey || e.key !== 'Z' || !e.shiftKey) return;
+        // e.keyCode 90 = 'z'
+        if (!e.ctrlKey || !e.shiftKey || e.keyCode !== 90) return;
+        e.preventDefault();
         io.redo();
+        _this3.updated = true;
       });
       this.addEventListener('keydown', function (e) {
-        if (!e.ctrlKey || e.key !== 'v') return;
+        // e.keyCode 89 = 'y'
+        if (!e.ctrlKey || e.shiftKey || e.keyCode !== 89) return;
+        e.preventDefault();
+        io.redo();
+        _this3.updated = true;
+      });
+      this.addEventListener('keydown', function (e) {
+        // keyCode 86 = 'v'
+        if (!e.ctrlKey || e.keyCode !== 86) return;
         lastSelection = _this3.getSelection();
       });
       this.addEventListener('keydown', function (e) {
-        if (!e.ctrlKey || e.key !== 'x') return;
+        // keyCode 88 = 'x'
+        if (!e.ctrlKey || e.keyCode !== 88) return;
         lastSelection = _this3.getSelection();
       });
       this.addEventListener('keyup', function (e) {
-        if (!e.ctrlKey || e.key !== 'x') return;
+        // keyCode 88 = 'x'
+        if (!e.ctrlKey || e.keyCode !== 88) return;
         var range = lastSelection;
         _this3.cursorPos = range.startOffset;
 

@@ -221,30 +221,45 @@ class Editable extends HTMLElement {
             this.cursorPos = this.getCursorPos()
         })
 
-        this.addEventListener('keydown', (e: any): void => {
-            if (!e.ctrlKey || e.key !== 'z' || e.shiftKey) return
-
+        this.addEventListener('keydown', (e: KeyboardEvent) => {
+            // e.keyCode 90 = 'z'
+            if (!e.ctrlKey || e.shiftKey || e.keyCode !== 90) return
+            e.preventDefault()
             io.undo()
+            this.updated = true
         })
 
-        this.addEventListener('keydown', (e: any): void => {
-            if (!e.ctrlKey || e.key !== 'Z' || !e.shiftKey) return
-
+        this.addEventListener('keydown', (e: KeyboardEvent) => {
+            // e.keyCode 90 = 'z'
+            if (!e.ctrlKey || !e.shiftKey || e.keyCode !== 90) return
+            e.preventDefault()
             io.redo()
+            this.updated = true
+        })
+
+        this.addEventListener('keydown', (e: KeyboardEvent) => {
+            // e.keyCode 89 = 'y'
+            if (!e.ctrlKey || e.shiftKey || e.keyCode !== 89) return
+            e.preventDefault()
+            io.redo()
+            this.updated = true
         })
 
         this.addEventListener('keydown', (e: any): void => {
-            if (!e.ctrlKey || e.key !== 'v') return
+            // keyCode 86 = 'v'
+            if (!e.ctrlKey || e.keyCode !== 86) return
             lastSelection = this.getSelection()
         })
 
         this.addEventListener('keydown', (e: any): void => {
-            if (!e.ctrlKey || e.key !== 'x') return
+            // keyCode 88 = 'x'
+            if (!e.ctrlKey || e.keyCode !== 88) return
             lastSelection = this.getSelection()
         })
 
         this.addEventListener('keyup', (e: any): void => {
-            if (!e.ctrlKey || e.key !== 'x') return
+            // keyCode 88 = 'x'
+            if (!e.ctrlKey || e.keyCode !== 88) return
 
             let range = lastSelection
             this.cursorPos = range.startOffset
