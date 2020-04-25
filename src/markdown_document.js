@@ -130,14 +130,10 @@ export default class MarkdownDocument extends Document {
             0
         )
 
-        process(['bold'], /(?<!\*|\\\*)\*{2}([^*`{2, 3}]+)\*{2}(?!\*|\\)/gm, 2)
-        process(['italic'], /(?<!\*|\\)\*([^*`{2, 3}]+)(?<!\\|\*)\*/gm, 1)
+        process(['bold'], /(?<!\*|\\\*)\*{2}([^*]+)\*{2}(?!\*|\\)/gm, 2)
+        process(['italic'], /(?<!\*|\\)\*([^*]+)(?<!\\|\*)\*/gm, 1)
 
-        process(
-            ['bold', 'italic'],
-            /(?<!\*|\\)\*{3}([^*`{2, 3}]+)\*{3}(?!\*)/gm,
-            3
-        )
+        process(['bold', 'italic'], /(?<!\*|\\)\*{3}([^*]+)\*{3}(?!\*)/gm, 3)
 
         process(['underline'], /__(.+?)__/gm, 2)
         process(['strike'], /~~(.+?)~~/gm, 2)
@@ -365,7 +361,7 @@ export default class MarkdownDocument extends Document {
         html = html.replace(/\\#/gm, '#')
         html = html.replace(/\\~/gm, '~')
 
-        html = html.replace(/\n/gm, '<br/>').replace(/\r/gm, '')
+        html = html.replace(/\n/gm, '<br/>\n').replace(/\r/gm, '')
 
         html = html.replace(
             /<span class=["']service[_]*.*?["']>(.+?)<\/span>/gm,
@@ -380,7 +376,8 @@ export default class MarkdownDocument extends Document {
                     `${style.openTag}(.+)${style.closeTag.replace(
                         '/',
                         '\\/'
-                    )}<br\\/>`
+                    )}<br\\/>`,
+                    'gm'
                 ),
                 `${style.openTag}$1${style.closeTag}`
             )

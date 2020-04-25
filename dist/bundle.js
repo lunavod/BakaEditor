@@ -1660,12 +1660,12 @@ function (_Document) {
       html = html.replace(/\\_/gm, '_');
       html = html.replace(/\\#/gm, '#');
       html = html.replace(/\\~/gm, '~');
-      html = html.replace(/\n/gm, '<br/>').replace(/\r/gm, '');
+      html = html.replace(/\n/gm, '<br/>\n').replace(/\r/gm, '');
       html = html.replace(/<span class=["']service[_]*.*?["']>(.+?)<\/span>/gm, '');
       Object.keys(this.styles).forEach(function (styleName) {
         var style = _this.styles[styleName];
         if (!style.block) return;
-        html = html.replace(new RegExp("".concat(style.openTag, "(.+)").concat(style.closeTag.replace('/', '\\/'), "<br\\/>")), "".concat(style.openTag, "$1").concat(style.closeTag));
+        html = html.replace(new RegExp("".concat(style.openTag, "(.+)").concat(style.closeTag.replace('/', '\\/'), "<br\\/>"), 'gm'), "".concat(style.openTag, "$1").concat(style.closeTag));
       });
       return html;
     }
@@ -1801,9 +1801,9 @@ function (_Document) {
       processLinks();
       processImages();
       process(['link'], /(?<!\]\()(https?:\/\/[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b[-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)/gm, 0);
-      process(['bold'], /(?<!\*|\\\*)\*{2}([^*`{2, 3}]+)\*{2}(?!\*|\\)/gm, 2);
-      process(['italic'], /(?<!\*|\\)\*([^*`{2, 3}]+)(?<!\\|\*)\*/gm, 1);
-      process(['bold', 'italic'], /(?<!\*|\\)\*{3}([^*`{2, 3}]+)\*{3}(?!\*)/gm, 3);
+      process(['bold'], /(?<!\*|\\\*)\*{2}([^*]+)\*{2}(?!\*|\\)/gm, 2);
+      process(['italic'], /(?<!\*|\\)\*([^*]+)(?<!\\|\*)\*/gm, 1);
+      process(['bold', 'italic'], /(?<!\*|\\)\*{3}([^*]+)\*{3}(?!\*)/gm, 3);
       process(['underline'], /__(.+?)__/gm, 2);
       process(['strike'], /~~(.+?)~~/gm, 2);
       process(['quote'], /(?<!`|\\)``\n([^`]+?)\n``/gm, 3);
